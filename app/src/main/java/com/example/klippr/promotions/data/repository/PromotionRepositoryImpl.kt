@@ -1,0 +1,67 @@
+package com.example.klippr.promotions.data.repository
+
+import com.example.klippr.promotions.data.local.dao.PromotionDao
+import com.example.klippr.promotions.data.mapper.toDomain
+import com.example.klippr.promotions.data.mapper.toEntity
+import com.example.klippr.promotions.data.remote.api.PromotionApiService
+import com.example.klippr.promotions.domain.model.Promotion
+import com.example.klippr.promotions.domain.model.PromotionCategory
+import com.example.klippr.promotions.domain.model.PromotionStatus
+import com.example.klippr.promotions.domain.repository.PromotionRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+// @author Samuel Bonifacio
+// Estrategia offline-first: la UI lee siempre desde Room; refreshX() sincroniza desde la API.
+class PromotionRepositoryImpl(
+    private val dao: PromotionDao,
+    private val api: PromotionApiService,
+) : PromotionRepository {
+
+    override fun getAll(): Flow<List<Promotion>> =
+        dao.getAll().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun getById(id: String): Promotion? =
+        dao.getById(id)?.toDomain()
+
+    override fun getByStatus(status: PromotionStatus): Flow<List<Promotion>> =
+        dao.getByStatus(status.name).map { list -> list.map { it.toDomain() } }
+
+    override fun getByCategory(category: PromotionCategory): Flow<List<Promotion>> =
+        dao.getByCategory(category.name).map { list -> list.map { it.toDomain() } }
+
+    override fun getFavorites(): Flow<List<Promotion>> =
+        dao.getFavorites().map { list -> list.map { it.toDomain() } }
+
+    override fun search(query: String): Flow<List<Promotion>> =
+        dao.search(query).map { list -> list.map { it.toDomain() } }
+
+    override fun getByStatusAndCategory(
+        status: PromotionStatus,
+        category: PromotionCategory,
+    ): Flow<List<Promotion>> =
+        dao.getByStatusAndCategory(status.name, category.name)
+            .map { list -> list.map { it.toDomain() } }
+
+    override fun getByBusinessId(businessId: String): Flow<List<Promotion>> =
+        dao.getByBusinessId(businessId).map { list -> list.map { it.toDomain() } }
+
+    override suspend fun refreshActive() {
+        val favorites = dao.getAll().map { it.map { e -> e.id to e.isFavorite } }
+        // Preserva isFavorite local al reemplazar la caché con datos frescos de la API.
+        val favMap = mutableMapOf<String, Boolean>()
+        dao.getAll().collect { list -> list.forEach { favMap[it.id] = it.isFavorite } }
+        val entities = api.getActive().map { dto -> dto.toEntity(isFavorite = favMap[dto.id] ?: false) }
+        dao.upsertAll(entities)
+    }
+
+    override suspend fun refreshByBusiness(businessId: String) {
+        val favMap = mutableMapOf<String, Boolean>()
+        dao.getByBusinessId(businessId).collect { list -> list.forEach { favMap[it.id] = it.isFavorite } }
+        val entities = api.getByBusiness(businessId).map { dto -> dto.toEntity(isFavorite = favMap[dto.id] ?: false) }
+        dao.upsertAll(entities)
+    }
+
+    override suspend fun toggleFavorite(id: String, isFavorite: Boolean) =
+        dao.updateFavorite(id, isFavorite)
+}
