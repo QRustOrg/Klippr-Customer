@@ -5,20 +5,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
 import com.example.klippr.core.database.KlipprDatabase
+import com.example.klippr.navigation.AppNavGraph
 import com.example.klippr.promotions.data.remote.api.PromotionApiService
 import com.example.klippr.promotions.data.repository.PromotionRepositoryImpl
 import com.example.klippr.promotions.domain.usecase.GetActivePromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.GetPromotionByIdUseCase
 import com.example.klippr.promotions.domain.usecase.SearchPromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.ToggleFavoriteUseCase
-import com.example.klippr.promotions.presentation.view.ExploreScreen
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.ui.theme.KlipprTheme
 import retrofit2.Retrofit
@@ -63,16 +60,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             KlipprTheme {
-                Surface(
-                    modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    ExploreScreen(
-                        viewModel = viewModel,
-                        onPromotionClick = { /* TODO: navegar a PromotionDetailScreen */ },
-                        onBack = { /* raíz del backstack: no hay pantalla anterior */ },
-                    )
-                }
+                AppNavGraph(viewModel = viewModel)
             }
         }
     }
