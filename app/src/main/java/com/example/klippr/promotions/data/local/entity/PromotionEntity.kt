@@ -18,6 +18,9 @@ import java.time.Instant
         Index(value = ["endDate"]),
     ],
 )
+
+//Entidad Principal de Promotion con sus datos necesarios para la persistencia local.
+//Incluye campos para detalles de la promoción, estado, fechas, y relaciones con el negocio.
 data class PromotionEntity(
     @PrimaryKey val id: String,
     val businessId: String,

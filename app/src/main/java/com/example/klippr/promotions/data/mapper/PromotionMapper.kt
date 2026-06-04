@@ -9,7 +9,7 @@ import com.example.klippr.promotions.domain.model.PromotionStatus
 import java.time.Instant
 
 // @author Samuel Bonifacio
-// isFavorite se recibe como parámetro para preservar el flag local al hacer refresh desde la red.
+// Mappers para convertir entre PromotionDto (API), PromotionEntity (caché local) y Promotion (dominio).
 fun PromotionDto.toEntity(isFavorite: Boolean = false): PromotionEntity = PromotionEntity(
     id                   = id,
     businessId           = businessId,
@@ -33,6 +33,7 @@ fun PromotionDto.toEntity(isFavorite: Boolean = false): PromotionEntity = Promot
     rating               = null,
 )
 
+// Convierte PromotionEntity a Promotion, mapeando campos y normalizando enums.
 fun PromotionEntity.toDomain(): Promotion = Promotion(
     id                   = id,
     businessId           = businessId,
@@ -56,6 +57,7 @@ fun PromotionEntity.toDomain(): Promotion = Promotion(
     rating               = rating,
 )
 
+// Convierte Promotion a PromotionEntity, mapeando campos y normalizando enums.
 fun Promotion.toEntity(): PromotionEntity = PromotionEntity(
     id                   = id,
     businessId           = businessId,

@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 // @author Samuel Bonifacio
 /** Acceso a la tabla `promotions`. Lecturas como Flow; escrituras suspend. */
+// PromotionDao representa la capa de acceso a datos local para promociones.
+// Define métodos para consultar promociones por diversos criterios (estado, categoría, negocio)
+// y para realizar operaciones de inserción, actualización y eliminación.
+// Las consultas devuelven Flows.
 @Dao
 interface PromotionDao {
 

@@ -12,7 +12,7 @@ import com.example.klippr.promotions.data.local.entity.PromotionEntity
 @Database(
     entities = [PromotionEntity::class],
     version = 1,
-    exportSchema = true,
+    exportSchema = false,
 )
 @TypeConverters(InstantConverter::class)
 abstract class KlipprDatabase : RoomDatabase() {

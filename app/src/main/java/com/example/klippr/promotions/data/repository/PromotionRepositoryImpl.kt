@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 // @author Samuel Bonifacio
-// Estrategia offline-first: la UI lee siempre desde Room; refreshX() sincroniza desde la API.
+// Implementacion de PromotionRepository que combina acceso a datos local (Room) y remoto (Retrofit).
+// Maneja mapeo entre entidades, DTOs y modelos de dominio, y preserva el estado de favoritos.
+// Al refrescar datos desde la API.
 class PromotionRepositoryImpl(
     private val dao: PromotionDao,
     private val api: PromotionApiService,
