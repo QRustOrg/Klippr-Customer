@@ -18,7 +18,7 @@ import com.example.klippr.promotions.domain.usecase.GetActivePromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.GetPromotionByIdUseCase
 import com.example.klippr.promotions.domain.usecase.SearchPromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.ToggleFavoriteUseCase
-import com.example.klippr.promotions.presentation.view.PromotionListScreen
+import com.example.klippr.promotions.presentation.view.ExploreScreen
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.ui.theme.KlipprTheme
 import retrofit2.Retrofit
@@ -67,9 +67,10 @@ class MainActivity : ComponentActivity() {
                     modifier = androidx.compose.ui.Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    PromotionListScreen(
+                    ExploreScreen(
                         viewModel = viewModel,
                         onPromotionClick = { /* TODO: navegar a PromotionDetailScreen */ },
+                        onBack = { /* raíz del backstack: no hay pantalla anterior */ },
                     )
                 }
             }

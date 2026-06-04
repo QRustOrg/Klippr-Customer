@@ -9,35 +9,37 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
+    primary = KlipprPurple,
+    onPrimary = Color.White,
+    primaryContainer = KlipprLavender,
     secondary = PurpleGrey80,
-    tertiary = Pink80
+    tertiary = Pink80,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = KlipprPurple,
     onPrimary = Color.White,
+    // primaryContainer se usa para indicadores de navegación, chips seleccionados, etc.
+    primaryContainer = KlipprLavender,
+    onPrimaryContainer = Color(0xFF21005D),
+    secondary = KlipprPurpleDark,
     onSecondary = Color.White,
-    onTertiary = Color.White,
+    background = Color.White,
+    surface = Color.White,
     onBackground = Color(0xFF1C1B1F),
     onSurface = Color(0xFF1C1B1F),
-    */
+    surfaceVariant = Color(0xFFF3F3F3),
 )
 
 @Composable
 fun KlipprTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // dynamicColor deshabilitado para preservar la identidad visual de Klippr en Android 12+.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
