@@ -9,17 +9,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
 import com.example.klippr.core.database.KlipprDatabase
+import com.example.klippr.core.datastore.SessionDataStore
+import com.example.klippr.core.network.NetworkModule
+import com.example.klippr.iam.data.repository.AuthRepositoryImpl
+import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
+import com.example.klippr.iam.domain.usecase.SignInUseCase
+import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.navigation.AppNavGraph
-import com.example.klippr.promotions.data.remote.api.PromotionApiService
 import com.example.klippr.promotions.data.repository.PromotionRepositoryImpl
 import com.example.klippr.promotions.domain.usecase.GetActivePromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.GetPromotionByIdUseCase
 import com.example.klippr.promotions.domain.usecase.SearchPromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.ToggleFavoriteUseCase
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
+import com.example.klippr.redemption.data.mapper.RedemptionMapper
+import com.example.klippr.redemption.data.repository.RedemptionRepositoryImpl
+import com.example.klippr.redemption.domain.usecase.GenerateRedemptionUseCase
+import com.example.klippr.redemption.domain.usecase.GetConsumerRedemptionsUseCase
+import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.ui.theme.KlipprTheme
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -30,20 +38,28 @@ class MainActivity : ComponentActivity() {
             .build()
     }
 
-    // Retrofit, fetch de API
-    private val api by lazy {
-        Retrofit.Builder()
-            .baseUrl("https://klippr-backend-production.up.railway.app/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(PromotionApiService::class.java)
+    // Sesión local (token + userId) e infraestructura de red compartida con interceptor Bearer.
+    private val sessionStore by lazy { SessionDataStore(applicationContext) }
+    private val network by lazy { NetworkModule(sessionStore) }
+
+    // IAM
+    private val authRepository by lazy { AuthRepositoryImpl(network.authApi, sessionStore) }
+
+    private val authViewModel: AuthViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = AuthViewModel(
+                signInUseCase = SignInUseCase(authRepository),
+                getCurrentUserUseCase = GetCurrentUserUseCase(authRepository),
+            ) as T
+        }
     }
 
     private val viewModel: PromotionViewModel by viewModels {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                val repository = PromotionRepositoryImpl(db.promotionDao(), api)
+                val repository = PromotionRepositoryImpl(db.promotionDao(), network.promotionApi)
                 return PromotionViewModel(
                     getActivePromotions  = GetActivePromotionsUseCase(repository),
                     getPromotionById     = GetPromotionByIdUseCase(repository),
@@ -55,12 +71,31 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val redemptionViewModel: RedemptionViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                val mapper = RedemptionMapper(network.promotionApi)
+                val repository = RedemptionRepositoryImpl(network.redemptionApi, mapper)
+                return RedemptionViewModel(
+                    generateRedemption = GenerateRedemptionUseCase(repository),
+                    getConsumerRedemptions = GetConsumerRedemptionsUseCase(repository),
+                    getCurrentUser = GetCurrentUserUseCase(authRepository),
+                ) as T
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             KlipprTheme {
-                AppNavGraph(viewModel = viewModel)
+                AppNavGraph(
+                    authViewModel = authViewModel,
+                    viewModel = viewModel,
+                    redemptionViewModel = redemptionViewModel,
+                )
             }
         }
     }

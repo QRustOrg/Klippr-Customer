@@ -38,8 +38,16 @@ android {
 dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("androidx.navigation:navigation-compose:2.7.4")
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+
+    // Sesión local (token + userId) para IAM
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Generación de códigos QR escaneables (US-04)
+    implementation("com.google.zxing:core:3.5.3")
 
     val room_version = "2.7.1"
     implementation("androidx.room:room-runtime:$room_version")

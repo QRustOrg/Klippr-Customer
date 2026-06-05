@@ -102,6 +102,7 @@ fun ExploreScreen(
     onPromotionClick: (String) -> Unit,
     onBack: () -> Unit,
     onNavigateToCreate: () -> Unit = {},
+    onNavigateToMisPromos: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.listState.collectAsStateWithLifecycle()
@@ -138,7 +139,12 @@ fun ExploreScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = KlipprPurple),
             )
         },
-        bottomBar = { ExploreBottomBar(onNavigateToCreate = onNavigateToCreate) },
+        bottomBar = {
+            ExploreBottomBar(
+                onNavigateToCreate = onNavigateToCreate,
+                onNavigateToMisPromos = onNavigateToMisPromos,
+            )
+        },
         containerColor = Color.White,
         modifier = modifier,
     ) { innerPadding ->
@@ -542,7 +548,10 @@ private fun ExplorePromoCard(promotion: Promotion, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ExploreBottomBar(onNavigateToCreate: () -> Unit = {}) {
+private fun ExploreBottomBar(
+    onNavigateToCreate: () -> Unit = {},
+    onNavigateToMisPromos: () -> Unit = {},
+) {
     val inactive = TextSecondary
     NavigationBar(containerColor = Color.White, tonalElevation = 4.dp) {
         // "Comunidad" actúa como entry point temporal a CreatePromotion hasta implementar su pantalla propia.
@@ -565,7 +574,7 @@ private fun ExploreBottomBar(onNavigateToCreate: () -> Unit = {}) {
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
         )
         NavigationBarItem(
-            selected = true, onClick = {},
+            selected = true, onClick = onNavigateToMisPromos,
             icon = { Icon(Icons.Default.Apps, contentDescription = "Promos") },
             label = { Text("Promos", fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(
