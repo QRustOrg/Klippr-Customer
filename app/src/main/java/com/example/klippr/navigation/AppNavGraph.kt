@@ -10,7 +10,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.klippr.iam.presentation.view.ForgotPasswordScreen
 import com.example.klippr.iam.presentation.view.SignInScreen
+import com.example.klippr.iam.presentation.view.SignUpScreen
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.promotions.presentation.view.CreatePromotionScreen
 import com.example.klippr.promotions.presentation.view.ExploreScreen
@@ -39,6 +41,25 @@ fun AppNavGraph(
                         popUpTo(Routes.SIGN_IN) { inclusive = true }
                     }
                 },
+                onNavigateToSignUp = { navController.navigate(Routes.SIGN_UP) },
+                onNavigateToForgot = { navController.navigate(Routes.FORGOT_PASSWORD) },
+            )
+        }
+
+        composable(Routes.SIGN_UP) {
+            SignUpScreen(
+                viewModel = authViewModel,
+                onSignedUp = {
+                    navController.navigate(Routes.EXPLORE) {
+                        popUpTo(Routes.SIGN_IN) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable(Routes.FORGOT_PASSWORD) {
+            ForgotPasswordScreen(
+                onPasswordChanged = { navController.popBackStack() },
             )
         }
 

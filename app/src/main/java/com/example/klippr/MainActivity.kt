@@ -14,6 +14,7 @@ import com.example.klippr.core.network.NetworkModule
 import com.example.klippr.iam.data.repository.AuthRepositoryImpl
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
 import com.example.klippr.iam.domain.usecase.SignInUseCase
+import com.example.klippr.iam.domain.usecase.SignUpConsumerUseCase
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.navigation.AppNavGraph
 import com.example.klippr.promotions.data.repository.PromotionRepositoryImpl
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T = AuthViewModel(
                 signInUseCase = SignInUseCase(authRepository),
+                signUpConsumerUseCase = SignUpConsumerUseCase(authRepository),
                 getCurrentUserUseCase = GetCurrentUserUseCase(authRepository),
             ) as T
         }

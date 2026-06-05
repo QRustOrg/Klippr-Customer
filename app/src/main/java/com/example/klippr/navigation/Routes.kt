@@ -5,6 +5,8 @@ package com.example.klippr.navigation
 /** Rutas de navegación de la app. Usar siempre estas constantes en lugar de strings literales. */
 object Routes {
     const val SIGN_IN = "sign_in"
+    const val SIGN_UP = "sign_up"
+    const val FORGOT_PASSWORD = "forgot_password"
     const val EXPLORE = "explore"
     const val CREATE_PROMOTION = "create_promotion"
     const val MIS_PROMOS = "mis_promos"

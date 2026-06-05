@@ -10,6 +10,9 @@ interface AuthRepository {
     /** Inicia sesión contra el backend y persiste la sesión resultante. */
     suspend fun signIn(email: String, password: String): Session
 
+    /** Registra nuevo consumidor y persiste la sesión resultante. */
+    suspend fun signUpConsumer(firstName: String, lastName: String, email: String, password: String): Session
+
     /** Sesión actual reactiva (`null` si no hay usuario). */
     val session: Flow<Session?>
 

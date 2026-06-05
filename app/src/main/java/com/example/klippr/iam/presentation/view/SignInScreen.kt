@@ -2,148 +2,201 @@ package com.example.klippr.iam.presentation.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
-import com.example.klippr.ui.theme.KlipprLavender
-import com.example.klippr.ui.theme.KlipprPurple
+import com.example.la25_11.R
 
 // @author Samuel Bonifacio
-/** Pantalla de inicio de sesión. Al autenticar, dispara [onSignedIn]. */
+
+/** Pantalla de inicio de sesión (mockup 1:1). */
 @Composable
 fun SignInScreen(
     viewModel: AuthViewModel,
     onSignedIn: () -> Unit,
+    onNavigateToSignUp: () -> Unit = {},
+    onNavigateToForgot: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var email by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    // Navega cuando hay usuario autenticado (login manual o sesión restaurada).
-    androidx.compose.runtime.LaunchedEffect(state.isAuthenticated) {
+    LaunchedEffect(state.isAuthenticated) {
         if (state.isAuthenticated) onSignedIn()
     }
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(ScreenBg)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp),
-        contentAlignment = Alignment.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Column(
+        Spacer(Modifier.height(48.dp))
+
+        // Logo del app (Coil maneja iconos adaptativos del mipmap)
+        AsyncImage(
+            model = R.mipmap.ic_launcher,
+            contentDescription = "Klippr",
+            modifier = Modifier
+                .size(180.dp)
+                .clip(RoundedCornerShape(28.dp)),
+        )
+
+        Spacer(Modifier.height(28.dp))
+
+        Text(
+            text = "Welcome to\nKlippr!",
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextDark,
+            lineHeight = 42.sp,
             modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(84.dp)
-                    .background(KlipprLavender, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Default.LocalOffer,
-                    contentDescription = null,
-                    tint = KlipprPurple,
-                    modifier = Modifier.size(40.dp),
-                )
-            }
+        )
 
-            androidx.compose.foundation.layout.Spacer(Modifier.height(16.dp))
-            Text("Klippr", fontWeight = FontWeight.Bold, fontSize = 30.sp, color = KlipprPurple)
-            androidx.compose.foundation.layout.Spacer(Modifier.height(4.dp))
-            Text("Inicia sesión para continuar", fontSize = 14.sp, color = Color(0xFF888888))
+        Spacer(Modifier.height(32.dp))
 
-            androidx.compose.foundation.layout.Spacer(Modifier.height(32.dp))
+        // Username field
+        KlipprField(
+            value = username,
+            onValueChange = { username = it },
+            label = "Username",
+            keyboardType = KeyboardType.Email,
+        )
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                colors = klipprFieldColors(),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-            )
+        Spacer(Modifier.height(16.dp))
 
-            androidx.compose.foundation.layout.Spacer(Modifier.height(14.dp))
+        // Password field
+        KlipprField(
+            value = password,
+            onValueChange = { password = it },
+            label = "Password",
+            isPassword = true,
+        )
 
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Contraseña") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                colors = klipprFieldColors(),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            if (state.error != null) {
-                androidx.compose.foundation.layout.Spacer(Modifier.height(10.dp))
-                Text(state.error!!, color = Color(0xFFD32F2F), fontSize = 13.sp)
-            }
-
-            androidx.compose.foundation.layout.Spacer(Modifier.height(24.dp))
-
-            Button(
-                onClick = { viewModel.signIn(email, password) },
-                enabled = !state.isLoading,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = KlipprPurple),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
-                } else {
-                    Text("Iniciar sesión", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
-                }
+        // Forgot password
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onNavigateToForgot) {
+                Text("Forgot your password?", color = LinkPurple, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         }
+
+        if (state.error != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(state.error!!, color = Color(0xFFD32F2F), fontSize = 13.sp)
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Button(
+            onClick = { viewModel.signIn(username, password) },
+            enabled = !state.isLoading,
+            shape = RoundedCornerShape(50),
+            colors = ButtonDefaults.buttonColors(containerColor = ButtonPurple),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+        ) {
+            if (state.isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
+            } else {
+                Text("Log in", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Color.White)
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        // Sign up link
+        Text(
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(color = TextDark, fontWeight = FontWeight.Bold, fontSize = 15.sp)) {
+                    append("Don't have an account? ")
+                }
+                withStyle(SpanStyle(color = LinkPurple, fontWeight = FontWeight.Bold, fontSize = 15.sp)) {
+                    append("Sign up")
+                }
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
+
+        Spacer(Modifier.height(32.dp))
     }
 }
 
 @Composable
-private fun klipprFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = KlipprPurple,
-    unfocusedBorderColor = KlipprLavender,
-    focusedLabelColor = KlipprPurple,
-    cursorColor = KlipprPurple,
-)
+internal fun KlipprField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    isPassword: Boolean = false,
+    keyboardType: KeyboardType = KeyboardType.Text,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, fontSize = 14.sp, color = TextGray) },
+        singleLine = true,
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+        keyboardOptions = KeyboardOptions(keyboardType = if (isPassword) KeyboardType.Password else keyboardType),
+        trailingIcon = {
+            IconButton(onClick = { onValueChange("") }) {
+                Icon(Icons.Default.Cancel, contentDescription = "Borrar", tint = ClearIcon, modifier = Modifier.size(22.dp))
+            }
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = ButtonPurple,
+            unfocusedBorderColor = FieldBorder,
+            focusedLabelColor = ButtonPurple,
+            unfocusedLabelColor = TextGray,
+            focusedTextColor = TextDark,
+            unfocusedTextColor = TextDark,
+            cursorColor = ButtonPurple,
+            unfocusedContainerColor = Color.White,
+            focusedContainerColor = Color.White,
+        ),
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
