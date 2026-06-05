@@ -1,4 +1,4 @@
-package com.example.la25_11
+package com.example.klippr
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.la25_11"
+    namespace = "com.example.klippr"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.la25_11"
+        applicationId = "com.example.klippr"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

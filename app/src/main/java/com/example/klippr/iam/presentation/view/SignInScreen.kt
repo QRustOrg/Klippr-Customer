@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
-import com.example.la25_11.R
+import com.example.klippr.R
 
 // @author Samuel Bonifacio
 
