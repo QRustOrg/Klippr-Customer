@@ -14,9 +14,13 @@ import com.example.klippr.core.network.NetworkModule
 import com.example.klippr.iam.data.repository.AuthRepositoryImpl
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
 import com.example.klippr.iam.domain.usecase.SignInUseCase
+import com.example.klippr.iam.domain.usecase.SignOutUseCase
 import com.example.klippr.iam.domain.usecase.SignUpConsumerUseCase
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.navigation.AppNavGraph
+import com.example.klippr.profile.data.repository.ProfileRepositoryImpl
+import com.example.klippr.profile.domain.usecase.GetUserProfileUseCase
+import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.data.repository.PromotionRepositoryImpl
 import com.example.klippr.promotions.domain.usecase.GetActivePromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.GetPromotionByIdUseCase
@@ -46,6 +50,9 @@ class MainActivity : ComponentActivity() {
     // IAM
     private val authRepository by lazy { AuthRepositoryImpl(network.authApi, sessionStore) }
 
+    // Perfil: usa el userId de la sesión para consultar GET /api/Users/{userId}.
+    private val profileRepository by lazy { ProfileRepositoryImpl(network.profileApi, sessionStore) }
+
     private val authViewModel: AuthViewModel by viewModels {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -53,6 +60,16 @@ class MainActivity : ComponentActivity() {
                 signInUseCase = SignInUseCase(authRepository),
                 signUpConsumerUseCase = SignUpConsumerUseCase(authRepository),
                 getCurrentUserUseCase = GetCurrentUserUseCase(authRepository),
+                signOutUseCase = SignOutUseCase(authRepository),
+            ) as T
+        }
+    }
+
+    private val profileViewModel: ProfileViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = ProfileViewModel(
+                getUserProfile = GetUserProfileUseCase(profileRepository),
             ) as T
         }
     }
@@ -95,6 +112,7 @@ class MainActivity : ComponentActivity() {
             KlipprTheme {
                 AppNavGraph(
                     authViewModel = authViewModel,
+                    profileViewModel = profileViewModel,
                     viewModel = viewModel,
                     redemptionViewModel = redemptionViewModel,
                 )

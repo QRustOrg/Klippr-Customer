@@ -101,6 +101,7 @@ fun ExploreScreen(
     viewModel: PromotionViewModel,
     onPromotionClick: (String) -> Unit,
     onBack: () -> Unit,
+    onNavigateToHome: () -> Unit = {},
     onNavigateToCreate: () -> Unit = {},
     onNavigateToMisPromos: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -141,6 +142,7 @@ fun ExploreScreen(
         },
         bottomBar = {
             ExploreBottomBar(
+                onNavigateToHome = onNavigateToHome,
                 onNavigateToCreate = onNavigateToCreate,
                 onNavigateToMisPromos = onNavigateToMisPromos,
             )
@@ -549,6 +551,7 @@ private fun ExplorePromoCard(promotion: Promotion, onClick: () -> Unit) {
 
 @Composable
 private fun ExploreBottomBar(
+    onNavigateToHome: () -> Unit = {},
     onNavigateToCreate: () -> Unit = {},
     onNavigateToMisPromos: () -> Unit = {},
 ) {
@@ -562,7 +565,7 @@ private fun ExploreBottomBar(
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
         )
         NavigationBarItem(
-            selected = false, onClick = {},
+            selected = false, onClick = onNavigateToHome,
             icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
             label = { Text("Inicio", fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),

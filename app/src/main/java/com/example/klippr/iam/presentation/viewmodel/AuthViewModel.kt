@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
 import com.example.klippr.iam.domain.usecase.SignInUseCase
+import com.example.klippr.iam.domain.usecase.SignOutUseCase
 import com.example.klippr.iam.domain.usecase.SignUpConsumerUseCase
 import com.example.klippr.iam.presentation.state.AuthUiState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ class AuthViewModel(
     private val signInUseCase: SignInUseCase,
     private val signUpConsumerUseCase: SignUpConsumerUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val signOutUseCase: SignOutUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthUiState())
@@ -62,6 +64,14 @@ class AuthViewModel(
             } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false, error = e.message ?: "Error al registrarse") }
             }
+        }
+    }
+
+    /** Cierra sesión: limpia la sesión persistida y resetea el estado a "no autenticado". */
+    fun signOut() {
+        viewModelScope.launch {
+            signOutUseCase()
+            _state.update { AuthUiState() }
         }
     }
 

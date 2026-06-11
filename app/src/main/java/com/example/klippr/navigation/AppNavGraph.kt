@@ -10,10 +10,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.klippr.home.presentation.view.HomeScreen
 import com.example.klippr.iam.presentation.view.ForgotPasswordScreen
 import com.example.klippr.iam.presentation.view.SignInScreen
 import com.example.klippr.iam.presentation.view.SignUpScreen
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
+import com.example.klippr.profile.presentation.view.ProfileScreen
+import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.presentation.view.CreatePromotionScreen
 import com.example.klippr.promotions.presentation.view.ExploreScreen
 import com.example.klippr.promotions.presentation.view.PromotionDetailScreen
@@ -21,23 +24,33 @@ import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.presentation.view.MisPromosScreen
 import com.example.klippr.redemption.presentation.view.QrCodeScreen
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
+import com.example.klippr.settings.presentation.view.SettingsScreen
 
 // @author Samuel Bonifacio
 
 @Composable
 fun AppNavGraph(
     authViewModel: AuthViewModel,
+    profileViewModel: ProfileViewModel,
     viewModel: PromotionViewModel,
     redemptionViewModel: RedemptionViewModel,
     navController: NavHostController = rememberNavController(),
 ) {
+    // Cierra sesión y vuelve al login limpiando todo el backstack.
+    val logout: () -> Unit = {
+        authViewModel.signOut()
+        navController.navigate(Routes.SIGN_IN) {
+            popUpTo(0) { inclusive = true }
+        }
+    }
+
     NavHost(navController = navController, startDestination = Routes.SIGN_IN) {
 
         composable(Routes.SIGN_IN) {
             SignInScreen(
                 viewModel = authViewModel,
                 onSignedIn = {
-                    navController.navigate(Routes.EXPLORE) {
+                    navController.navigate(Routes.HOME) {
                         popUpTo(Routes.SIGN_IN) { inclusive = true }
                     }
                 },
@@ -50,10 +63,38 @@ fun AppNavGraph(
             SignUpScreen(
                 viewModel = authViewModel,
                 onSignedUp = {
-                    navController.navigate(Routes.EXPLORE) {
+                    navController.navigate(Routes.HOME) {
                         popUpTo(Routes.SIGN_IN) { inclusive = true }
                     }
                 },
+            )
+        }
+
+        composable(Routes.HOME) {
+            HomeScreen(
+                profileViewModel = profileViewModel,
+                promotionViewModel = viewModel,
+                redemptionViewModel = redemptionViewModel,
+                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                onNavigateToExplore = { navController.navigate(Routes.EXPLORE) },
+                onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
+                onNavigateToCreate = { navController.navigate(Routes.CREATE_PROMOTION) },
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Routes.PROFILE) },
+                onLogout = logout,
+            )
+        }
+
+        composable(Routes.PROFILE) {
+            ProfileScreen(
+                viewModel = profileViewModel,
+                onBack = { navController.popBackStack() },
+                onLogout = logout,
             )
         }
 
@@ -67,7 +108,10 @@ fun AppNavGraph(
             ExploreScreen(
                 viewModel = viewModel,
                 onPromotionClick = { id -> navController.navigate(Routes.promotionDetail(id)) },
-                onBack = { /* pantalla raíz */ },
+                onBack = { navController.popBackStack() },
+                onNavigateToHome = {
+                    navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } }
+                },
                 onNavigateToCreate = { navController.navigate(Routes.CREATE_PROMOTION) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
             )
@@ -131,8 +175,8 @@ fun AppNavGraph(
                 onCodeClick = { id -> navController.navigate(Routes.qrCode(id)) },
                 onNavigateCommunity = { navController.navigate(Routes.CREATE_PROMOTION) },
                 onNavigateHome = {
-                    navController.navigate(Routes.EXPLORE) {
-                        popUpTo(Routes.EXPLORE) { inclusive = true }
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
             )
