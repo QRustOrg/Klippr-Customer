@@ -51,15 +51,15 @@ class AuthViewModel(
         }
     }
 
-    fun signUp(name: String, email: String, password: String) {
-        if (name.isBlank() || email.isBlank() || password.isBlank()) {
+    fun signUp(firstName: String, lastName: String, email: String, password: String) {
+        if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || password.isBlank()) {
             _state.update { it.copy(error = "Completa todos los campos") }
             return
         }
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
-                val session = signUpConsumerUseCase(name, email, password)
+                val session = signUpConsumerUseCase(firstName, lastName, email, password)
                 _state.update { it.copy(isLoading = false, user = session.user) }
             } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false, error = e.message ?: "Error al registrarse") }

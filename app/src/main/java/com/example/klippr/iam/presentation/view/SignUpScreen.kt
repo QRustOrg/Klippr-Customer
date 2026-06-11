@@ -45,9 +45,9 @@ fun SignUpScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var name by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
     LaunchedEffect(state.isAuthenticated) {
@@ -85,11 +85,11 @@ fun SignUpScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        KlipprField(value = name, onValueChange = { name = it }, label = "Name")
+        KlipprField(value = firstName, onValueChange = { firstName = it }, label = "Nombre")
+        Spacer(Modifier.height(16.dp))
+        KlipprField(value = lastName, onValueChange = { lastName = it }, label = "Apellido")
         Spacer(Modifier.height(16.dp))
         KlipprField(value = email, onValueChange = { email = it }, label = "Email", keyboardType = KeyboardType.Email)
-        Spacer(Modifier.height(16.dp))
-        KlipprField(value = username, onValueChange = { username = it }, label = "Username")
         Spacer(Modifier.height(16.dp))
         KlipprField(value = password, onValueChange = { password = it }, label = "Password", isPassword = true)
 
@@ -101,7 +101,7 @@ fun SignUpScreen(
         Spacer(Modifier.height(28.dp))
 
         Button(
-            onClick = { viewModel.signUp(name, email, password) },
+            onClick = { viewModel.signUp(firstName, lastName, email, password) },
             enabled = !state.isLoading,
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(containerColor = ButtonPurple),
