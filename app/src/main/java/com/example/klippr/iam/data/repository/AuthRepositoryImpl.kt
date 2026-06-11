@@ -1,6 +1,7 @@
 package com.example.klippr.iam.data.repository
 
 import com.example.klippr.core.datastore.SessionDataStore
+import com.example.klippr.core.network.safeApiCall
 import com.example.klippr.iam.data.remote.api.AuthApiService
 import com.example.klippr.iam.data.remote.dto.SignInRequestDto
 import com.example.klippr.iam.data.remote.dto.SignUpConsumerRequestDto
@@ -18,7 +19,7 @@ class AuthRepositoryImpl(
 ) : AuthRepository {
 
     override suspend fun signIn(email: String, password: String): Session {
-        val dto = api.signIn(SignInRequestDto(email = email, password = password))
+        val dto = safeApiCall { api.signIn(SignInRequestDto(email = email, password = password)) }
         val session = Session(
             token = dto.token,
             user = User(userId = dto.userId, email = dto.email, role = dto.role),
@@ -28,10 +29,14 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun signUpConsumer(firstName: String, lastName: String, email: String, password: String): Session {
-        val dto = api.signUpConsumer(SignUpConsumerRequestDto(email = email, password = password, firstName = firstName, lastName = lastName))
-        val session = Session(token = dto.token, user = User(userId = dto.userId, email = dto.email, role = dto.role))
-        sessionStore.save(session)
-        return session
+        // El endpoint de registro crea el usuario pero no devuelve token: tras el 201 hacemos
+        // un sign-in automático para obtener la sesión y persistirla (reutiliza signIn de arriba).
+        safeApiCall {
+            api.signUpConsumer(
+                SignUpConsumerRequestDto(email = email, password = password, firstName = firstName, lastName = lastName),
+            )
+        }
+        return signIn(email, password)
     }
 
     override val session: Flow<Session?> = sessionStore.session

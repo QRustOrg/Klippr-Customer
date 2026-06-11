@@ -3,6 +3,7 @@ package com.example.klippr.iam.data.remote.api
 import com.example.klippr.iam.data.remote.dto.AuthenticatedUserDto
 import com.example.klippr.iam.data.remote.dto.SignInRequestDto
 import com.example.klippr.iam.data.remote.dto.SignUpConsumerRequestDto
+import com.example.klippr.iam.data.remote.dto.SignUpConsumerResponseDto
 import retrofit2.http.Body
 import retrofit2.http.POST
 
@@ -14,5 +15,5 @@ interface AuthApiService {
     suspend fun signIn(@Body body: SignInRequestDto): AuthenticatedUserDto
 
     @POST("api/Authentication/sign-up/consumer")
-    suspend fun signUpConsumer(@Body body: SignUpConsumerRequestDto): AuthenticatedUserDto
+    suspend fun signUpConsumer(@Body body: SignUpConsumerRequestDto): SignUpConsumerResponseDto
 }

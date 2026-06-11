@@ -1,6 +1,7 @@
 package com.example.klippr.iam.presentation.view
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -158,7 +159,9 @@ fun SignInScreen(
                     append("Sign up")
                 }
             },
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .clickable { onNavigateToSignUp() },
         )
 
         Spacer(Modifier.height(32.dp))

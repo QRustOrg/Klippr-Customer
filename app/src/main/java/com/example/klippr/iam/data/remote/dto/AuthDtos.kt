@@ -17,10 +17,23 @@ data class SignUpConsumerRequestDto(
     @SerializedName("lastName")  val lastName: String,
 )
 
-/** Respuesta de sign-in / sign-up: identidad + token de acceso. */
+/** Respuesta de sign-in: identidad + token de acceso (`AuthenticatedUserResource`). */
 data class AuthenticatedUserDto(
     @SerializedName("userId") val userId: String,
     @SerializedName("email")  val email: String,
     @SerializedName("role")   val role: String,
     @SerializedName("token")  val token: String,
+)
+
+/**
+ * Respuesta de sign-up/consumer (`UserResource`, 201): el backend crea el usuario pero
+ * **no devuelve token**. Por eso, tras registrarse, el repositorio hace un sign-in automático
+ * para obtener la sesión. (Gson ignora los campos extra del recurso que no mapeamos.)
+ */
+data class SignUpConsumerResponseDto(
+    @SerializedName("userId")    val userId: String,
+    @SerializedName("email")     val email: String,
+    @SerializedName("role")      val role: String,
+    @SerializedName("firstName") val firstName: String? = null,
+    @SerializedName("lastName")  val lastName: String? = null,
 )
