@@ -3,9 +3,11 @@ package com.example.klippr.iam.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
+import com.example.klippr.iam.domain.usecase.ResetPasswordUseCase
 import com.example.klippr.iam.domain.usecase.SignInUseCase
 import com.example.klippr.iam.domain.usecase.SignOutUseCase
 import com.example.klippr.iam.domain.usecase.SignUpConsumerUseCase
+import com.example.klippr.iam.domain.usecase.VerifyEmailUseCase
 import com.example.klippr.iam.presentation.state.AuthUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +22,8 @@ class AuthViewModel(
     private val signUpConsumerUseCase: SignUpConsumerUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val signOutUseCase: SignOutUseCase,
+    private val verifyEmailUseCase: VerifyEmailUseCase,
+    private val resetPasswordUseCase: ResetPasswordUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthUiState())
@@ -74,6 +78,46 @@ class AuthViewModel(
             _state.update { AuthUiState() }
         }
     }
+
+    /** Paso 1 "olvidé mi contraseña": valida el email contra el backend. */
+    fun verifyEmail(email: String) {
+        if (email.isBlank()) {
+            _state.update { it.copy(error = "Ingresa tu email") }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                verifyEmailUseCase(email)
+                _state.update { it.copy(isLoading = false, emailVerified = true, forgotEmail = email.trim()) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = e.message ?: "No encontramos ese email") }
+            }
+        }
+    }
+
+    /** Paso 2 "olvidé mi contraseña": valida localmente y fija la nueva contraseña por backend. */
+    fun resetPassword(newPassword: String, confirmPassword: String) {
+        val email = _state.value.forgotEmail
+        when {
+            email.isNullOrBlank() -> { _state.update { it.copy(error = "Email no disponible, reinicia el flujo") }; return }
+            newPassword.isBlank() || confirmPassword.isBlank() -> { _state.update { it.copy(error = "Completa todos los campos") }; return }
+            newPassword != confirmPassword -> { _state.update { it.copy(error = "Las contraseñas no coinciden") }; return }
+            newPassword.length < 6 -> { _state.update { it.copy(error = "Mínimo 6 caracteres") }; return }
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                resetPasswordUseCase(email!!, newPassword)
+                _state.update { it.copy(isLoading = false, resetSuccess = true) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al cambiar la contraseña") }
+            }
+        }
+    }
+
+    /** Limpia los flags del flujo de recuperación tras navegar (conserva [AuthUiState.forgotEmail]). */
+    fun consumeResetFlags() = _state.update { it.copy(emailVerified = false, resetSuccess = false, error = null) }
 
     fun consumeError() = _state.update { it.copy(error = null) }
 }

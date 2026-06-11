@@ -13,6 +13,12 @@ interface AuthRepository {
     /** Registra nuevo consumidor y persiste la sesión resultante. */
     suspend fun signUpConsumer(firstName: String, lastName: String, email: String, password: String): Session
 
+    /** Verifica que el email exista en el backend. Lanza [ApiException] (404) si no existe. */
+    suspend fun verifyEmail(email: String)
+
+    /** Fija una nueva contraseña para el usuario identificado por email. Lanza [ApiException] en error. */
+    suspend fun resetPassword(email: String, newPassword: String)
+
     /** Sesión actual reactiva (`null` si no hay usuario). */
     val session: Flow<Session?>
 

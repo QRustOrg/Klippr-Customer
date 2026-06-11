@@ -32,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,23 +44,24 @@ import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
  */
 
 /**
- * Paso 1 del flujo "olvidé mi contraseña": el usuario ingresa su email.
- * viewModel.verifyEmail() valida contra el backend; al verificarse (state.emailVerified)
- * navega a la pantalla de reset (ResetPasswordScreen).
+ * Paso 2 del flujo "olvidé mi contraseña": fija la nueva contraseña.
+ * El email validado se lee de [AuthViewModel] (state.forgotEmail). Llama al backend vía
+ * viewModel.resetPassword(); al éxito navega de vuelta a SignIn.
  */
 @Composable
-fun ForgotPasswordScreen(
+fun ResetPasswordScreen(
     viewModel: AuthViewModel,
-    onEmailVerified: () -> Unit,
+    onPasswordChanged: () -> Unit,
     onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var email by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
 
-    LaunchedEffect(state.emailVerified) {
-        if (state.emailVerified) {
-            onEmailVerified()
+    LaunchedEffect(state.resetSuccess) {
+        if (state.resetSuccess) {
+            onPasswordChanged()
             viewModel.consumeResetFlags()
         }
     }
@@ -78,7 +78,7 @@ fun ForgotPasswordScreen(
             Spacer(Modifier.height(64.dp))
 
             Text(
-                text = "Forgot password?",
+                text = "Reset password",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextDark,
@@ -87,10 +87,19 @@ fun ForgotPasswordScreen(
             Spacer(Modifier.height(48.dp))
 
             KlipprField(
-                value = email,
-                onValueChange = { email = it },
-                label = "Email",
-                keyboardType = KeyboardType.Email,
+                value = newPassword,
+                onValueChange = { newPassword = it },
+                label = "New password",
+                isPassword = true,
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            KlipprField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = "Confirm new password",
+                isPassword = true,
             )
 
             if (state.error != null) {
@@ -101,7 +110,7 @@ fun ForgotPasswordScreen(
             Spacer(Modifier.height(40.dp))
 
             Button(
-                onClick = { viewModel.verifyEmail(email) },
+                onClick = { viewModel.resetPassword(newPassword, confirmPassword) },
                 enabled = !state.isLoading,
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(containerColor = ButtonPurple),
@@ -110,7 +119,7 @@ fun ForgotPasswordScreen(
                 if (state.isLoading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
                 } else {
-                    Text("Recover password", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Color.White)
+                    Text("Change password", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Color.White)
                 }
             }
 

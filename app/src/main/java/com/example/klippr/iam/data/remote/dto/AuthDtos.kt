@@ -9,6 +9,17 @@ data class SignInRequestDto(
     @SerializedName("password") val password: String,
 )
 
+/** Cuerpo de POST /api/Authentication/forgot-password: verifica que el email exista. */
+data class ForgotPasswordRequestDto(
+    @SerializedName("email") val email: String,
+)
+
+/** Cuerpo de PUT /api/Authentication/reset-password: fija la nueva contraseña por email. */
+data class ResetPasswordRequestDto(
+    @SerializedName("email")       val email: String,
+    @SerializedName("newPassword") val newPassword: String,
+)
+
 /** Cuerpo de POST /api/Authentication/sign-up/consumer. */
 data class SignUpConsumerRequestDto(
     @SerializedName("email")     val email: String,

@@ -3,6 +3,8 @@ package com.example.klippr.iam.data.repository
 import com.example.klippr.core.datastore.SessionDataStore
 import com.example.klippr.core.network.safeApiCall
 import com.example.klippr.iam.data.remote.api.AuthApiService
+import com.example.klippr.iam.data.remote.dto.ForgotPasswordRequestDto
+import com.example.klippr.iam.data.remote.dto.ResetPasswordRequestDto
 import com.example.klippr.iam.data.remote.dto.SignInRequestDto
 import com.example.klippr.iam.data.remote.dto.SignUpConsumerRequestDto
 import com.example.klippr.iam.domain.model.Session
@@ -37,6 +39,15 @@ class AuthRepositoryImpl(
             )
         }
         return signIn(email, password)
+    }
+
+    override suspend fun verifyEmail(email: String) {
+        // forgot-password devuelve 2xx si el email existe; safeApiCall traduce el 404 a ApiException.
+        safeApiCall { api.forgotPassword(ForgotPasswordRequestDto(email = email)) }
+    }
+
+    override suspend fun resetPassword(email: String, newPassword: String) {
+        safeApiCall { api.resetPassword(ResetPasswordRequestDto(email = email, newPassword = newPassword)) }
     }
 
     override val session: Flow<Session?> = sessionStore.session

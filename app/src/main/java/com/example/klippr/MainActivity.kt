@@ -13,9 +13,11 @@ import com.example.klippr.core.datastore.SessionDataStore
 import com.example.klippr.core.network.NetworkModule
 import com.example.klippr.iam.data.repository.AuthRepositoryImpl
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
+import com.example.klippr.iam.domain.usecase.ResetPasswordUseCase
 import com.example.klippr.iam.domain.usecase.SignInUseCase
 import com.example.klippr.iam.domain.usecase.SignOutUseCase
 import com.example.klippr.iam.domain.usecase.SignUpConsumerUseCase
+import com.example.klippr.iam.domain.usecase.VerifyEmailUseCase
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.navigation.AppNavGraph
 import com.example.klippr.profile.data.repository.ProfileRepositoryImpl
@@ -61,6 +63,8 @@ class MainActivity : ComponentActivity() {
                 signUpConsumerUseCase = SignUpConsumerUseCase(authRepository),
                 getCurrentUserUseCase = GetCurrentUserUseCase(authRepository),
                 signOutUseCase = SignOutUseCase(authRepository),
+                verifyEmailUseCase = VerifyEmailUseCase(authRepository),
+                resetPasswordUseCase = ResetPasswordUseCase(authRepository),
             ) as T
         }
     }

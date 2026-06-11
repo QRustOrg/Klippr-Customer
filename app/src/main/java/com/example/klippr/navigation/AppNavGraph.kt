@@ -10,8 +10,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.klippr.core.presentation.SplashScreen
 import com.example.klippr.home.presentation.view.HomeScreen
 import com.example.klippr.iam.presentation.view.ForgotPasswordScreen
+import com.example.klippr.iam.presentation.view.ResetPasswordScreen
 import com.example.klippr.iam.presentation.view.SignInScreen
 import com.example.klippr.iam.presentation.view.SignUpScreen
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
@@ -44,7 +46,17 @@ fun AppNavGraph(
         }
     }
 
-    NavHost(navController = navController, startDestination = Routes.SIGN_IN) {
+    NavHost(navController = navController, startDestination = Routes.SPLASH) {
+
+        composable(Routes.SPLASH) {
+            SplashScreen(
+                onTimeout = {
+                    navController.navigate(Routes.SIGN_IN) {
+                        popUpTo(Routes.SPLASH) { inclusive = true }
+                    }
+                },
+            )
+        }
 
         composable(Routes.SIGN_IN) {
             SignInScreen(
@@ -67,6 +79,7 @@ fun AppNavGraph(
                         popUpTo(Routes.SIGN_IN) { inclusive = true }
                     }
                 },
+                onBack = { navController.popBackStack() },
             )
         }
 
@@ -100,7 +113,22 @@ fun AppNavGraph(
 
         composable(Routes.FORGOT_PASSWORD) {
             ForgotPasswordScreen(
-                onPasswordChanged = { navController.popBackStack() },
+                viewModel = authViewModel,
+                onEmailVerified = { navController.navigate(Routes.RESET_PASSWORD) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.RESET_PASSWORD) {
+            ResetPasswordScreen(
+                viewModel = authViewModel,
+                // Vuelve a SignIn para iniciar sesión con la nueva contraseña.
+                onPasswordChanged = {
+                    navController.navigate(Routes.SIGN_IN) {
+                        popUpTo(Routes.SIGN_IN) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() },
             )
         }
 
