@@ -37,7 +37,8 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun KlipprTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    // Forzado a claro: la app usa fondo blanco en todas las pantallas.
+    darkTheme: Boolean = false,
     // dynamicColor deshabilitado para preservar la identidad visual de Klippr en Android 12+.
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit

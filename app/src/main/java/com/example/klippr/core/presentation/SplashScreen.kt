@@ -20,7 +20,7 @@ import kotlinx.coroutines.delay
 
 // @author Samuel Bonifacio
 
-/** Splash inicial: muestra el lockup de Klippr sobre el fondo lila antes de entrar al flujo. */
+/** SplashScreen. */
 @Composable
 fun SplashScreen(
     onTimeout: () -> Unit,
@@ -34,7 +34,7 @@ fun SplashScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF2F0FF)),
+            .background(Color.White),
         contentAlignment = Alignment.Center,
     ) {
         Surface(color = Color.White, shape = RoundedCornerShape(28.dp)) {

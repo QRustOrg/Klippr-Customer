@@ -54,7 +54,7 @@ import com.example.klippr.R
 
 // @author Samuel Bonifacio
 
-/** Pantalla de inicio de sesión (mockup 1:1). */
+/** Pantalla de inicio de sesión */
 @Composable
 fun SignInScreen(
     viewModel: AuthViewModel,
@@ -82,8 +82,6 @@ fun SignInScreen(
     ) {
         Spacer(Modifier.height(48.dp))
 
-        // Lockup de marca (ghost + wordmark) sobre tarjeta blanca para que el fondo
-        // blanco del PNG se lea como superficie intencional y no flote sobre el lila.
         Surface(color = Color.White, shape = RoundedCornerShape(28.dp)) {
             AsyncImage(
                 model = R.drawable.klippr_lockup,

@@ -68,7 +68,7 @@ fun ProfileScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = KlipprPurple),
             )
         },
-        containerColor = Color(0xFFF2F0FF),
+        containerColor = Color.White,
         modifier = modifier,
     ) { innerPadding ->
         Box(
