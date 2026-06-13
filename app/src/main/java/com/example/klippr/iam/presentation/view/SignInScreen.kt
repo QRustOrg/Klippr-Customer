@@ -20,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,6 +68,7 @@ fun SignInScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var rememberMe by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.isAuthenticated) {
         if (state.isAuthenticated) onSignedIn()
@@ -124,8 +127,23 @@ fun SignInScreen(
             isPassword = true,
         )
 
-        // Forgot password
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        // Remember me + Forgot password
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { rememberMe = !rememberMe },
+            ) {
+                Checkbox(
+                    checked = rememberMe,
+                    onCheckedChange = { rememberMe = it },
+                    colors = CheckboxDefaults.colors(checkedColor = ButtonPurple),
+                )
+                Text("Remember me", color = TextDark, fontSize = 14.sp)
+            }
             TextButton(onClick = onNavigateToForgot) {
                 Text("Forgot your password?", color = LinkPurple, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
@@ -139,7 +157,7 @@ fun SignInScreen(
         Spacer(Modifier.height(16.dp))
 
         Button(
-            onClick = { viewModel.signIn(username, password) },
+            onClick = { viewModel.signIn(username, password, rememberMe) },
             enabled = !state.isLoading,
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(containerColor = ButtonPurple),

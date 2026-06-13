@@ -20,13 +20,14 @@ class AuthRepositoryImpl(
     private val sessionStore: SessionDataStore,
 ) : AuthRepository {
 
-    override suspend fun signIn(email: String, password: String): Session {
+    override suspend fun signIn(email: String, password: String, rememberMe: Boolean): Session {
         val dto = safeApiCall { api.signIn(SignInRequestDto(email = email, password = password)) }
         val session = Session(
             token = dto.token,
             user = User(userId = dto.userId, email = dto.email, role = dto.role),
         )
-        sessionStore.save(session)
+        // Solo persistimos en disco (auto-login al reabrir) si el usuario marcó "Remember me".
+        if (rememberMe) sessionStore.save(session)
         return session
     }
 

@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.Flow
 // @author Samuel Bonifacio
 /** Contrato de IAM: autentica y expone la sesión persistida sin filtrar detalles de red/almacenamiento. */
 interface AuthRepository {
-    /** Inicia sesión contra el backend y persiste la sesión resultante. */
-    suspend fun signIn(email: String, password: String): Session
+    /** Inicia sesión contra el backend. Persiste la sesión en disco solo si [rememberMe] es true. */
+    suspend fun signIn(email: String, password: String, rememberMe: Boolean = true): Session
 
     /** Registra nuevo consumidor y persiste la sesión resultante. */
     suspend fun signUpConsumer(firstName: String, lastName: String, email: String, password: String): Session

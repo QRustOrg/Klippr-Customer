@@ -39,7 +39,7 @@ class AuthViewModel(
         }
     }
 
-    fun signIn(email: String, password: String) {
+    fun signIn(email: String, password: String, rememberMe: Boolean = true) {
         if (email.isBlank() || password.isBlank()) {
             _state.update { it.copy(error = "Ingresa email y contraseña") }
             return
@@ -47,7 +47,7 @@ class AuthViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
-                val session = signInUseCase(email, password)
+                val session = signInUseCase(email, password, rememberMe)
                 _state.update { it.copy(isLoading = false, user = session.user) }
             } catch (e: Exception) {
                 _state.update { it.copy(isLoading = false, error = e.message ?: "Error al iniciar sesión") }
