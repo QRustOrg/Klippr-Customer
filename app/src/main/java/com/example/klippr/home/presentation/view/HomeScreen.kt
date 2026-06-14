@@ -43,8 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.klippr.core.ui.KlipprBottomBar
-import com.example.klippr.core.ui.KlipprTab
+import com.example.klippr.shared.presentation.component.KlipprBottomBar
+import com.example.klippr.shared.presentation.component.KlipprTab
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel

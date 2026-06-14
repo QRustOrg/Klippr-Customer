@@ -1,4 +1,4 @@
-package com.example.klippr.core.ui
+package com.example.klippr.shared.presentation.component
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps

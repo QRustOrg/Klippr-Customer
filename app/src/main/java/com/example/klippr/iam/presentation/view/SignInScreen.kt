@@ -1,5 +1,6 @@
 package com.example.klippr.iam.presentation.view
 
+import com.example.klippr.shared.presentation.component.KlipprField
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -189,40 +190,4 @@ fun SignInScreen(
 
         Spacer(Modifier.height(32.dp))
     }
-}
-
-@Composable
-internal fun KlipprField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    isPassword: Boolean = false,
-    keyboardType: KeyboardType = KeyboardType.Text,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label, fontSize = 14.sp, color = TextGray) },
-        singleLine = true,
-        visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        keyboardOptions = KeyboardOptions(keyboardType = if (isPassword) KeyboardType.Password else keyboardType),
-        trailingIcon = {
-            IconButton(onClick = { onValueChange("") }) {
-                Icon(Icons.Default.Cancel, contentDescription = "Borrar", tint = ClearIcon, modifier = Modifier.size(22.dp))
-            }
-        },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = ButtonPurple,
-            unfocusedBorderColor = FieldBorder,
-            focusedLabelColor = ButtonPurple,
-            unfocusedLabelColor = TextGray,
-            focusedTextColor = TextDark,
-            unfocusedTextColor = TextDark,
-            cursorColor = ButtonPurple,
-            unfocusedContainerColor = Color.White,
-            focusedContainerColor = Color.White,
-        ),
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    )
 }
