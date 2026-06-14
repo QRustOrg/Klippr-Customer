@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.domain.repository.PromotionRepository
-import com.example.klippr.promotions.domain.usecase.GetActivePromotionsUseCase
+import com.example.klippr.promotions.domain.usecase.GetAllPromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.GetPromotionByIdUseCase
 import com.example.klippr.promotions.domain.usecase.SearchPromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.ToggleFavoriteUseCase
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 // @author Samuel Bonifacio
 // ViewModel único para lista y detalle. Las colecciones de Flow se lanzan en viewModelScope.
 class PromotionViewModel(
-    private val getActivePromotions: GetActivePromotionsUseCase,
+    private val getAllPromotions: GetAllPromotionsUseCase,
     private val getPromotionById: GetPromotionByIdUseCase,
     private val searchPromotions: SearchPromotionsUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
@@ -33,12 +33,18 @@ class PromotionViewModel(
     private val _detailState = MutableStateFlow(PromotionDetailState())
     val detailState: StateFlow<PromotionDetailState> = _detailState.asStateFlow()
 
-    init { loadActive() }
+    init { loadAll() }
 
-    fun loadActive() {
+    fun loadAll() {
+        // Refresca desde la red (GET /api/promotions) → Room.
         viewModelScope.launch {
             _listState.update { it.copy(isLoading = true, error = null) }
-            getActivePromotions()
+            runCatching { repository.refreshAll() }
+                .onFailure { e -> _listState.update { it.copy(error = e.message) } }
+        }
+        // Observa la caché de Room → state (emite inicial y tras el upsert).
+        viewModelScope.launch {
+            getAllPromotions()
                 .catch { e -> _listState.update { it.copy(isLoading = false, error = e.message) } }
                 .collect { list -> _listState.update { it.copy(isLoading = false, promotions = list) } }
         }
@@ -48,7 +54,7 @@ class PromotionViewModel(
         _listState.update { it.copy(searchQuery = query) }
         viewModelScope.launch {
             if (query.isBlank()) {
-                loadActive()
+                loadAll()
             } else {
                 searchPromotions(query)
                     .catch { e -> _listState.update { it.copy(error = e.message) } }

@@ -8,6 +8,9 @@ import retrofit2.http.Path
 /** Contrato Retrofit para el BC Promotions. Base URL: /api/promotions */
 interface PromotionApiService {
 
+    @GET("api/promotions")
+    suspend fun getAll(): List<PromotionDto>
+
     @GET("api/promotions/active")
     suspend fun getActive(): List<PromotionDto>
 

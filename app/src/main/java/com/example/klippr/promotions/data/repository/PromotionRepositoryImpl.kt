@@ -8,7 +8,9 @@ import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.domain.model.PromotionStatus
 import com.example.klippr.promotions.domain.repository.PromotionRepository
+import com.example.klippr.core.network.safeApiCall
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 // @author Samuel Bonifacio
@@ -48,19 +50,26 @@ class PromotionRepositoryImpl(
     override fun getByBusinessId(businessId: String): Flow<List<Promotion>> =
         dao.getByBusinessId(businessId).map { list -> list.map { it.toDomain() } }
 
-    override suspend fun refreshActive() {
-        val favorites = dao.getAll().map { it.map { e -> e.id to e.isFavorite } }
+    override suspend fun refreshAll() {
         // Preserva isFavorite local al reemplazar la caché con datos frescos de la API.
-        val favMap = mutableMapOf<String, Boolean>()
-        dao.getAll().collect { list -> list.forEach { favMap[it.id] = it.isFavorite } }
-        val entities = api.getActive().map { dto -> dto.toEntity(isFavorite = favMap[dto.id] ?: false) }
+        val favMap = dao.getAll().first().associate { it.id to it.isFavorite }
+        val entities = safeApiCall { api.getAll() }
+            .map { dto -> dto.toEntity(isFavorite = favMap[dto.id] ?: false) }
+        dao.upsertAll(entities)
+    }
+
+    override suspend fun refreshActive() {
+        // Preserva isFavorite local al reemplazar la caché con datos frescos de la API.
+        val favMap = dao.getAll().first().associate { it.id to it.isFavorite }
+        val entities = safeApiCall { api.getActive() }
+            .map { dto -> dto.toEntity(isFavorite = favMap[dto.id] ?: false) }
         dao.upsertAll(entities)
     }
 
     override suspend fun refreshByBusiness(businessId: String) {
-        val favMap = mutableMapOf<String, Boolean>()
-        dao.getByBusinessId(businessId).collect { list -> list.forEach { favMap[it.id] = it.isFavorite } }
-        val entities = api.getByBusiness(businessId).map { dto -> dto.toEntity(isFavorite = favMap[dto.id] ?: false) }
+        val favMap = dao.getByBusinessId(businessId).first().associate { it.id to it.isFavorite }
+        val entities = safeApiCall { api.getByBusiness(businessId) }
+            .map { dto -> dto.toEntity(isFavorite = favMap[dto.id] ?: false) }
         dao.upsertAll(entities)
     }
 

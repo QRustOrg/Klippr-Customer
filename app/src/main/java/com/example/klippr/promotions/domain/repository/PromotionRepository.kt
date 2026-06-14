@@ -19,6 +19,7 @@ interface PromotionRepository {
     fun getByBusinessId(businessId: String): Flow<List<Promotion>>
 
     // Refresca desde la API y persiste en caché; lanza excepción si no hay red y caché está vacía.
+    suspend fun refreshAll()
     suspend fun refreshActive()
     suspend fun refreshByBusiness(businessId: String)
     suspend fun toggleFavorite(id: String, isFavorite: Boolean)
