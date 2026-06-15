@@ -21,27 +21,38 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -69,6 +80,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,6 +93,7 @@ import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
+import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 
 // @author Samuel Bonifacio
 
@@ -97,20 +111,30 @@ private data class ExploreFilterState(
 ) {
     val isActive: Boolean
         get() = discountType != null || availableOnly || sortByPopularity || hasLocationOnly
+
+    // Número de filtros activos para el badge del botón de filtro.
+    val activeCount: Int
+        get() = (if (discountType != null) 1 else 0) +
+            (if (availableOnly) 1 else 0) +
+            (if (sortByPopularity) 1 else 0) +
+            (if (hasLocationOnly) 1 else 0)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreScreen(
     viewModel: PromotionViewModel,
-    onPromotionClick: (String) -> Unit,
+    redemptionViewModel: RedemptionViewModel,
     onBack: () -> Unit,
+    onNavigateToQr: (String) -> Unit,
     onNavigateToHome: () -> Unit = {},
     onNavigateToCreate: () -> Unit = {},
     onNavigateToMisPromos: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.listState.collectAsStateWithLifecycle()
+    val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
+    val businessNames by viewModel.businessNames.collectAsStateWithLifecycle()
 
     // La exploración consume solo promociones activas (GET /api/promotions/active),
     // las mismas que publica la app Flutter de los negocios.
@@ -119,6 +143,18 @@ fun ExploreScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showFilterPanel by remember { mutableStateOf(false) }
     var filterState by remember { mutableStateOf(ExploreFilterState()) }
+    // Id de la promo seleccionada → abre el modal con su detalle. Se guarda el id (no el objeto)
+    // para que el favorito/bookmark recomponga en vivo al togglear.
+    var selectedPromoId by remember { mutableStateOf<String?>(null) }
+
+    // Al generarse el código de redención, cierra el modal y navega a la pantalla del QR.
+    LaunchedEffect(redemptionState.generated) {
+        redemptionState.generated?.let { code ->
+            selectedPromoId = null
+            onNavigateToQr(code.id)
+            redemptionViewModel.consumeGenerated()
+        }
+    }
 
     // Aplica los filtros activos a la lista de promociones.
     val filteredPromos = remember(state.promotions, filterState) {
@@ -168,7 +204,7 @@ fun ExploreScreen(
                 item {
                     ExploreSearchRow(
                         query = searchQuery,
-                        isFilterActive = filterState.isActive,
+                        activeFilterCount = filterState.activeCount,
                         onQueryChange = { searchQuery = it; viewModel.onSearchQueryChange(it) },
                         onFilterClick = { showFilterPanel = !showFilterPanel },
                     )
@@ -228,7 +264,7 @@ fun ExploreScreen(
                             ExploreCategorySection(
                                 category = category,
                                 promotions = promos,
-                                onPromotionClick = onPromotionClick,
+                                onPromotionClick = { id -> selectedPromoId = id },
                             )
                         }
                     }
@@ -284,17 +320,181 @@ fun ExploreScreen(
                     },
                 )
             }
+
+            // Modal (Dialog centrado) con el detalle de la promo seleccionada.
+            val selectedPromo = filteredPromos.find { it.id == selectedPromoId }
+            if (selectedPromo != null) {
+                LaunchedEffect(selectedPromo.businessId) {
+                    viewModel.loadBusinessName(selectedPromo.businessId)
+                }
+                PromoModalDialog(
+                    promotion = selectedPromo,
+                    businessName = businessNames[selectedPromo.businessId],
+                    isGenerating = redemptionState.isGenerating,
+                    errorMessage = redemptionState.error,
+                    onDismiss = { selectedPromoId = null; redemptionViewModel.consumeError() },
+                    onToggleFavorite = { viewModel.toggleFavorite(selectedPromo.id, !selectedPromo.isFavorite) },
+                    onGenerateQr = { redemptionViewModel.generate(selectedPromo) },
+                )
+            }
+        }
+    }
+}
+
+// Modal (Dialog centrado) 1:1 con el mockup: imagen + X, nombre del negocio + bookmark + share,
+// descripción, divisor, Cantidad/Vigencia/Lugar, checkbox de términos que gatea "Generar QR".
+@Composable
+private fun PromoModalDialog(
+    promotion: Promotion,
+    businessName: String?,
+    isGenerating: Boolean,
+    errorMessage: String?,
+    onDismiss: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onGenerateQr: () -> Unit,
+) {
+    val context = LocalContext.current
+    var accepted by remember(promotion.id) { mutableStateOf(false) }
+    // Encabezado: nombre del negocio resuelto; fallback al nombre embebido o al título.
+    val heading = businessName ?: promotion.businessName?.ifBlank { null } ?: promotion.title
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color(0xFFFDF4FC))
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
+                val resId = rememberPromoDrawableId(promotion.imageKey)
+                if (resId != 0) {
+                    Image(
+                        painter = painterResource(resId),
+                        contentDescription = promotion.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    AsyncImage(
+                        model = promotion.imageUrl,
+                        contentDescription = promotion.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().background(Color(0xFFE8E8E8)),
+                    )
+                }
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+            }
+
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = heading,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
+                        color = TextPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = onToggleFavorite) {
+                        Icon(
+                            imageVector = if (promotion.isFavorite) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = if (promotion.isFavorite) "Quitar de guardados" else "Guardar",
+                            tint = TextPrimary,
+                        )
+                    }
+                    IconButton(onClick = {
+                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, "${promotion.title}\n${promotion.description}")
+                        }
+                        context.startActivity(android.content.Intent.createChooser(send, "Compartir"))
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Compartir", tint = TextPrimary)
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(promotion.description, fontSize = 16.sp, color = TextPrimary, lineHeight = 22.sp)
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = KlipprPurple.copy(alpha = 0.4f), thickness = 1.dp)
+                Spacer(Modifier.height(16.dp))
+                InfoLine("Cantidad:", "${promotion.availableRedemptions} disponibles")
+                Spacer(Modifier.height(10.dp))
+                InfoLine("Vigencia:", "Hasta el ${formatVigencia(promotion.endDate)}")
+                promotion.locationName?.takeIf { it.isNotBlank() }?.let { loc ->
+                    Spacer(Modifier.height(10.dp))
+                    InfoLine("Lugar:", loc)
+                }
+                Spacer(Modifier.height(18.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = accepted,
+                        onCheckedChange = { accepted = it },
+                        colors = CheckboxDefaults.colors(checkedColor = KlipprPurple),
+                    )
+                    Text("Acepto los ", fontSize = 14.sp, color = TextPrimary)
+                    Text("términos y condiciones", fontSize = 14.sp, color = KlipprPurple, fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.height(14.dp))
+                Button(
+                    onClick = onGenerateQr,
+                    enabled = accepted && !isGenerating,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = KlipprPurple,
+                        disabledContainerColor = Color(0xFFCFC6E8),
+                    ),
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .height(48.dp),
+                ) {
+                    if (isGenerating) {
+                        CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                    } else {
+                        Text("Generar QR", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+                    }
+                }
+                if (errorMessage != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(errorMessage, color = Color(0xFFD3503F), fontSize = 13.sp, modifier = Modifier.fillMaxWidth())
+                }
+            }
         }
     }
 }
 
 @Composable
+private fun InfoLine(label: String, value: String) {
+    Row {
+        Text(label, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextPrimary)
+        Spacer(Modifier.width(6.dp))
+        Text(value, fontSize = 15.sp, color = TextPrimary)
+    }
+}
+
+// "Hasta el 20 de diciembre de 2026" a partir de endDate (Instant).
+private fun formatVigencia(instant: java.time.Instant): String =
+    instant.atZone(java.time.ZoneId.systemDefault())
+        .toLocalDate()
+        .format(java.time.format.DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", java.util.Locale("es")))
+
+@Composable
 private fun ExploreSearchRow(
     query: String,
-    isFilterActive: Boolean,
+    activeFilterCount: Int,
     onQueryChange: (String) -> Unit,
     onFilterClick: () -> Unit,
 ) {
+    val isFilterActive = activeFilterCount > 0
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -357,13 +557,22 @@ private fun ExploreSearchRow(
                 modifier = Modifier.size(22.dp),
             )
             if (isFilterActive) {
+                // Badge numérico con la cantidad de filtros activos.
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(6.dp)
-                        .size(8.dp)
-                        .background(KlipprPurple, CircleShape),
-                )
+                        .offset(x = 6.dp, y = (-6).dp)
+                        .size(18.dp)
+                        .background(Color(0xFFE53935), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = activeFilterCount.toString(),
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
     }
@@ -598,7 +807,7 @@ private fun ExploreBottomBar(
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
         )
         NavigationBarItem(
-            selected = true, onClick = onNavigateToMisPromos,
+            selected = true, onClick = { /* ya estamos en Promos */ },
             icon = { Icon(Icons.Default.Apps, contentDescription = "Promos") },
             label = { Text("Promos", fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(

@@ -4,6 +4,7 @@ import com.example.klippr.promotions.data.local.dao.PromotionDao
 import com.example.klippr.promotions.data.mapper.toDomain
 import com.example.klippr.promotions.data.mapper.toEntity
 import com.example.klippr.promotions.data.remote.api.PromotionApiService
+import com.example.klippr.profile.data.remote.api.ProfileApiService
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.domain.model.PromotionStatus
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.map
 class PromotionRepositoryImpl(
     private val dao: PromotionDao,
     private val api: PromotionApiService,
+    private val profileApi: ProfileApiService,
 ) : PromotionRepository {
 
     override fun getAll(): Flow<List<Promotion>> =
@@ -75,4 +77,8 @@ class PromotionRepositoryImpl(
 
     override suspend fun toggleFavorite(id: String, isFavorite: Boolean) =
         dao.updateFavorite(id, isFavorite)
+
+    // El businessId de la promoción es el userId del negocio: GET /api/Users/{id}.businessName.
+    override suspend fun getBusinessName(businessId: String): String? =
+        runCatching { profileApi.getUser(businessId).businessName }.getOrNull()?.takeIf { it.isNotBlank() }
 }

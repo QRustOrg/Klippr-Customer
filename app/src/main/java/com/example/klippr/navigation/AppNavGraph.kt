@@ -92,6 +92,7 @@ fun AppNavGraph(
                 onNavigateToExplore = { navController.navigate(Routes.EXPLORE) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
                 onNavigateToCreate = { navController.navigate(Routes.CREATE_PROMOTION) },
+                onPromotionClick = { id -> navController.navigate(Routes.promotionDetail(id)) },
             )
         }
 
@@ -135,8 +136,9 @@ fun AppNavGraph(
         composable(Routes.EXPLORE) {
             ExploreScreen(
                 viewModel = viewModel,
-                onPromotionClick = { id -> navController.navigate(Routes.promotionDetail(id)) },
+                redemptionViewModel = redemptionViewModel,
                 onBack = { navController.popBackStack() },
+                onNavigateToQr = { id -> navController.navigate(Routes.qrCode(id)) },
                 onNavigateToHome = {
                     navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } }
                 },

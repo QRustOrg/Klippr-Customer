@@ -23,4 +23,8 @@ interface PromotionRepository {
     suspend fun refreshActive()
     suspend fun refreshByBusiness(businessId: String)
     suspend fun toggleFavorite(id: String, isFavorite: Boolean)
+
+    // Resuelve el nombre del negocio (businessId == userId del negocio) vía GET /api/Users/{id}.
+    // Devuelve null si no hay nombre o la llamada falla.
+    suspend fun getBusinessName(businessId: String): String?
 }

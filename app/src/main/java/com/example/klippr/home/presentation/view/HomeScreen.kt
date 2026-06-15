@@ -1,12 +1,15 @@
 package com.example.klippr.home.presentation.view
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,11 +26,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -39,13 +48,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
+import com.example.klippr.promotions.domain.model.DiscountType
+import com.example.klippr.promotions.domain.model.Promotion
+import com.example.klippr.promotions.domain.model.PromotionCategory
+import com.example.klippr.promotions.presentation.view.rememberPromoDrawableId
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.ui.theme.KlipprPurple
@@ -57,6 +73,8 @@ private val CardPink = Color(0xFFFBEFFA)
 private val PurpleText = Color(0xFF8A6FE8)
 private val TextDark = Color(0xFF1A1A1A)
 private val TextGray = Color(0xFF888888)
+private val PromoImgPlaceholder = Color(0xFFE4DCFB)
+private val StarAmber = Color(0xFFFFC107)
 
 /**
  * Pantalla principal (Home/Inicio). Reúne saludo (perfil), cupones (redenciones),
@@ -71,6 +89,7 @@ fun HomeScreen(
     onNavigateToExplore: () -> Unit,
     onNavigateToMisPromos: () -> Unit,
     onNavigateToCreate: () -> Unit,
+    onPromotionClick: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val profileState by profileViewModel.state.collectAsStateWithLifecycle()
@@ -81,6 +100,7 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         profileViewModel.load()
         redemptionViewModel.loadHistory()
+        promotionViewModel.loadActive()
     }
 
     val greeting = profileState.profile?.greetingName ?: ""
@@ -102,7 +122,7 @@ fun HomeScreen(
                 onComunidad = onNavigateToCreate,
                 onInicio = { /* ya estamos en Home */ },
                 onFavoritos = { /* placeholder */ },
-                onPromos = onNavigateToMisPromos,
+                onPromos = onNavigateToExplore,
             )
         },
         containerColor = ScreenBg,
@@ -116,7 +136,12 @@ fun HomeScreen(
                 .padding(horizontal = 20.dp),
         ) {
             Spacer(Modifier.height(16.dp))
-            CouponsCard(hasCoupons = hasCoupons, count = redemptionState.active.size, onExplore = onNavigateToExplore)
+            CouponsCard(
+                hasCoupons = hasCoupons,
+                count = redemptionState.active.size,
+                onExplore = onNavigateToExplore,
+                onSeeCoupons = onNavigateToMisPromos,
+            )
 
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -144,13 +169,190 @@ fun HomeScreen(
             StorePillsRow(onClick = onNavigateToExplore)
 
             Spacer(Modifier.height(24.dp))
-            Text("PARA TI", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = PurpleText)
-            Spacer(Modifier.height(12.dp))
-            ForYouRow(onClick = onNavigateToExplore)
+            when {
+                promoState.isLoading && promoState.promotions.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { CircularProgressIndicator(color = KlipprPurple) }
+                }
+                promoState.promotions.isEmpty() -> {
+                    Text(
+                        "No hay promociones activas",
+                        fontSize = 14.sp,
+                        color = TextGray,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                }
+                else -> {
+                    // Agrupa por categoría: cada una es una sección con título + carrusel horizontal.
+                    val grouped = promoState.promotions.groupBy { it.category }
+                    PromotionCategory.entries.filter { grouped.containsKey(it) }.forEach { category ->
+                        PromoCategorySection(
+                            title = category.label(),
+                            promotions = grouped[category].orEmpty(),
+                            onPromotionClick = onPromotionClick,
+                            onFavoriteClick = { id, fav -> promotionViewModel.toggleFavorite(id, fav) },
+                            onSeeMore = onNavigateToExplore,
+                        )
+                        Spacer(Modifier.height(20.dp))
+                    }
+                }
+            }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
+}
+
+// Sección por categoría: título con chevron + carrusel horizontal de cards verticales (estilo Airbnb).
+@Composable
+private fun PromoCategorySection(
+    title: String,
+    promotions: List<Promotion>,
+    onPromotionClick: (String) -> Unit,
+    onFavoriteClick: (String, Boolean) -> Unit,
+    onSeeMore: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSeeMore)
+            .padding(bottom = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
+            color = TextDark,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(Icons.Default.ChevronRight, contentDescription = "Ver más", tint = TextDark, modifier = Modifier.size(26.dp))
+    }
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        items(promotions, key = { it.id }) { promo ->
+            PromoCardVertical(
+                promotion = promo,
+                onClick = { onPromotionClick(promo.id) },
+                onFavoriteClick = { onFavoriteClick(promo.id, !promo.isFavorite) },
+            )
+        }
+    }
+}
+
+// Card vertical estilo Airbnb: imagen grande arriba, corazón de favorito overlay,
+// título y subtítulo "descuento · ★rating" debajo.
+@Composable
+private fun PromoCardVertical(
+    promotion: Promotion,
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .width(230.dp)
+            .clickable(onClick = onClick),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1.05f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(PromoImgPlaceholder),
+        ) {
+            val resId = rememberPromoDrawableId(promotion.imageKey)
+            if (resId != 0) {
+                Image(
+                    painter = painterResource(resId),
+                    contentDescription = promotion.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.28f))
+                    .clickable(onClick = onFavoriteClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (promotion.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (promotion.isFavorite) "Quitar favorito" else "Agregar favorito",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        // Nombre del negocio (visible cuando el backend lo provee; hoy llega null).
+        promotion.businessName?.takeIf { it.isNotBlank() }?.let { name ->
+            Text(
+                text = name,
+                fontSize = 12.sp,
+                color = TextGray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(2.dp))
+        }
+        Text(
+            text = promotion.title,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 15.sp,
+            color = TextDark,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DiscountBadge(promotion.discountLabel())
+            promotion.rating?.let { r ->
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Default.Star, contentDescription = null, tint = StarAmber, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(2.dp))
+                Text("%.1f".format(r), fontSize = 13.sp, color = TextDark, fontWeight = FontWeight.Medium)
+            }
+        }
+    }
+}
+
+// Etiqueta de descuento: pill relleno con primary, borde primary y texto blanco para contraste.
+@Composable
+private fun DiscountBadge(label: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(KlipprPurple)
+            .border(1.dp, KlipprPurple, RoundedCornerShape(8.dp))
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+    }
+}
+
+// Etiqueta de descuento para el subtítulo de la card.
+private fun Promotion.discountLabel(): String = when (discountType) {
+    DiscountType.PERCENTAGE -> "${discountValue.toInt()}% OFF"
+    DiscountType.FIXED_AMOUNT -> "S/ ${discountValue.toInt()} OFF"
+}
+
+// Nombre visible de la categoría para el título de cada sección.
+private fun PromotionCategory.label(): String = when (this) {
+    PromotionCategory.FOOD -> "Comida"
+    PromotionCategory.BEAUTY -> "Belleza"
+    PromotionCategory.HEALTH -> "Salud"
+    PromotionCategory.EDUCATION -> "Educación"
+    PromotionCategory.ENTERTAINMENT -> "Entretenimiento"
+    PromotionCategory.SPORTS -> "Deportes"
+    PromotionCategory.SERVICES -> "Servicios"
+    PromotionCategory.TECHNOLOGY -> "Tecnología"
+    PromotionCategory.OTHER -> "Otros"
 }
 
 @Composable
@@ -189,12 +391,13 @@ private fun HomeTopBar(name: String, onBell: () -> Unit, onSettings: () -> Unit)
 }
 
 @Composable
-private fun CouponsCard(hasCoupons: Boolean, count: Int, onExplore: () -> Unit) {
+private fun CouponsCard(hasCoupons: Boolean, count: Int, onExplore: () -> Unit, onSeeCoupons: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(CardPink)
+            .clickable(onClick = onSeeCoupons)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -300,22 +503,3 @@ private fun StorePillsRow(onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun ForYouRow(onClick: () -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        items(3) {
-            Box(
-                modifier = Modifier
-                    .width(180.dp)
-                    .height(110.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFF6F0FF))
-                    .clickable(onClick = onClick)
-                    .padding(16.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Text("Descubre promos\npara ti", fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = PurpleText)
-            }
-        }
-    }
-}

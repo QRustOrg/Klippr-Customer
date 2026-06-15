@@ -83,7 +83,7 @@ class MainActivity : ComponentActivity() {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                val repository = PromotionRepositoryImpl(db.promotionDao(), network.promotionApi)
+                val repository = PromotionRepositoryImpl(db.promotionDao(), network.promotionApi, network.profileApi)
                 return PromotionViewModel(
                     getAllPromotions     = GetAllPromotionsUseCase(repository),
                     getActivePromotions  = GetActivePromotionsUseCase(repository),

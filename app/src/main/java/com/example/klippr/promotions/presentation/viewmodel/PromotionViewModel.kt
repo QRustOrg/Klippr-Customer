@@ -36,6 +36,19 @@ class PromotionViewModel(
     private val _detailState = MutableStateFlow(PromotionDetailState())
     val detailState: StateFlow<PromotionDetailState> = _detailState.asStateFlow()
 
+    // Cache id_negocio -> nombre, resuelto on-demand al abrir el modal de una promo.
+    private val _businessNames = MutableStateFlow<Map<String, String>>(emptyMap())
+    val businessNames: StateFlow<Map<String, String>> = _businessNames.asStateFlow()
+
+    fun loadBusinessName(businessId: String) {
+        if (businessId.isBlank() || _businessNames.value.containsKey(businessId)) return
+        viewModelScope.launch {
+            repository.getBusinessName(businessId)?.let { name ->
+                _businessNames.update { it + (businessId to name) }
+            }
+        }
+    }
+
     // Colector activo de la lista. Se cancela antes de iniciar otro para que loadAll/loadActive/
     // search/favorites no compitan escribiendo `promotions` al mismo tiempo.
     private var observeJob: Job? = null
