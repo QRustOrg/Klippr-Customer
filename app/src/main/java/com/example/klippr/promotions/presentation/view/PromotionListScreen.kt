@@ -122,9 +122,9 @@ fun PromotionListScreen(
                 state.isLoading -> LoadingContent()
                 state.error != null -> ErrorContent(
                     message = state.error!!,
-                    onRetry = viewModel::loadActive,
+                    onRetry = viewModel::loadAll,
                 )
-                state.isEmpty -> EmptyPromotionsContent(onRetry = viewModel::loadActive)
+                state.isEmpty -> EmptyPromotionsContent(onRetry = viewModel::loadAll)
                 else -> PromotionLazyList(
                     promotions = state.displayed,
                     onItemClick = onPromotionClick,

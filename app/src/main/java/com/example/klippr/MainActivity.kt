@@ -25,6 +25,7 @@ import com.example.klippr.profile.domain.usecase.GetUserProfileUseCase
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.data.repository.PromotionRepositoryImpl
 import com.example.klippr.promotions.domain.usecase.GetActivePromotionsUseCase
+import com.example.klippr.promotions.domain.usecase.GetAllPromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.GetPromotionByIdUseCase
 import com.example.klippr.promotions.domain.usecase.SearchPromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.ToggleFavoriteUseCase
@@ -84,6 +85,7 @@ class MainActivity : ComponentActivity() {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 val repository = PromotionRepositoryImpl(db.promotionDao(), network.promotionApi)
                 return PromotionViewModel(
+                    getAllPromotions     = GetAllPromotionsUseCase(repository),
                     getActivePromotions  = GetActivePromotionsUseCase(repository),
                     getPromotionById     = GetPromotionByIdUseCase(repository),
                     searchPromotions     = SearchPromotionsUseCase(repository),

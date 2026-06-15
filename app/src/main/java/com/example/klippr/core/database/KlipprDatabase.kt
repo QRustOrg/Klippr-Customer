@@ -11,7 +11,10 @@ import com.example.klippr.promotions.data.local.entity.PromotionEntity
 // exportSchema = true para historial de migraciones. Instanciar como singleton vía DI.
 @Database(
     entities = [PromotionEntity::class],
-    version = 1,
+    // v2: se agregó la columna imageKey a PromotionEntity. El bump de versión permite que
+    // fallbackToDestructiveMigration recree la tabla (sin él, Room lanza IllegalStateException
+    // por hash de esquema distinto a la misma versión).
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(InstantConverter::class)

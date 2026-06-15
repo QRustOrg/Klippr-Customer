@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,6 +58,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +68,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -107,6 +111,11 @@ fun ExploreScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.listState.collectAsStateWithLifecycle()
+
+    // La exploración consume solo promociones activas (GET /api/promotions/active),
+    // las mismas que publica la app Flutter de los negocios.
+    LaunchedEffect(Unit) { viewModel.loadActive() }
+
     var searchQuery by remember { mutableStateOf("") }
     var showFilterPanel by remember { mutableStateOf(false) }
     var filterState by remember { mutableStateOf(ExploreFilterState()) }
@@ -506,15 +515,27 @@ private fun ExplorePromoCard(promotion: Promotion, onClick: () -> Unit) {
         modifier = Modifier.width(160.dp),
     ) {
         Column {
-            AsyncImage(
-                model = promotion.imageUrl,
-                contentDescription = promotion.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .background(Color(0xFFE8E8E8)),
-            )
+            val imageModifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+                .background(Color(0xFFE8E8E8))
+            val resId = rememberPromoDrawableId(promotion.imageKey)
+            if (resId != 0) {
+                Image(
+                    painter = painterResource(resId),
+                    contentDescription = promotion.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = imageModifier,
+                )
+            } else {
+                // Sin drawable local para este imageKey: cae a la imagen remota (o placeholder gris).
+                AsyncImage(
+                    model = promotion.imageUrl,
+                    contentDescription = promotion.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = imageModifier,
+                )
+            }
             Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Text(
                     text = promotion.title,
@@ -586,6 +607,18 @@ private fun ExploreBottomBar(
                 unselectedIconColor = inactive, unselectedTextColor = inactive,
             ),
         )
+    }
+}
+
+// Resuelve el imageKey del backend ("comida_pizza") a un drawable local con el mismo nombre.
+// Devuelve 0 si no existe, para que la card caiga al placeholder/imagen remota sin crashear.
+@Composable
+internal fun rememberPromoDrawableId(imageKey: String?): Int {
+    val ctx = LocalContext.current
+    return remember(imageKey) {
+        imageKey?.takeIf { it.isNotBlank() }
+            ?.let { ctx.resources.getIdentifier(it, "drawable", ctx.packageName) }
+            ?: 0
     }
 }
 

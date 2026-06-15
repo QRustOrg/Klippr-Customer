@@ -30,6 +30,7 @@ data class PromotionEntity(
     val discountType: String,
     val status: String,
     val imageUrl: String?,
+    val imageKey: String?,
     val termsAndConditions: String?,
     val availableRedemptions: Int,
     val currentRedemptions: Int,

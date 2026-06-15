@@ -13,6 +13,7 @@ data class Promotion(
     val discountType: DiscountType,
     val status: PromotionStatus,
     val imageUrl: String?,
+    val imageKey: String?,
     val termsAndConditions: String?,
     val availableRedemptions: Int,
     val currentRedemptions: Int,

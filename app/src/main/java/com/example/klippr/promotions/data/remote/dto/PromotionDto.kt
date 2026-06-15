@@ -14,6 +14,7 @@ data class PromotionDto(
     @SerializedName("startDate")      val startDate: String,
     @SerializedName("endDate")        val endDate: String,
     @SerializedName("redemptionCap")  val redemptionCap: Int?,
+    @SerializedName("imageKey")       val imageKey: String?,
     @SerializedName("status")         val status: String,
     @SerializedName("createdAt")      val createdAt: String,
     @SerializedName("updatedAt")      val updatedAt: String,
