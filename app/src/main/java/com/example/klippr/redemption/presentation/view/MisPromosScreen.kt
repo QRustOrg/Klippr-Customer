@@ -131,7 +131,12 @@ fun MisPromosScreen(
                     emptyText = "No tienes códigos activos",
                     codes = state.active,
                     onCodeClick = onCodeClick,
-                    onLeaveReview = null,
+                    onLeaveReview = { code ->
+                        communityViewModel.openReviewSheetForRedeemed(
+                            code.promotionId,
+                            code.promotionTitle ?: "Promoción"
+                        )
+                    },
                 )
                 redemptionSection(
                     title = "Historial usado",

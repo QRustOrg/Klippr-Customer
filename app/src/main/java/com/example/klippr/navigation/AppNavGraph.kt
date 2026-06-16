@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.klippr.community.presentation.view.CommunityScreen
+import com.example.klippr.community.presentation.view.ReviewBottomSheet
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
 import com.example.klippr.core.datastore.SessionDataStore
 import com.example.klippr.core.presentation.SplashScreen
@@ -175,10 +176,21 @@ fun AppNavGraph(
         ) { backStackEntry ->
             val redemptionId    = backStackEntry.arguments?.getString(Routes.ARG_REDEMPTION_ID).orEmpty()
             val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
+            val communityState  by communityViewModel.uiState.collectAsStateWithLifecycle()
             val code            = redemptionState.codeById(redemptionId)
 
             LaunchedEffect(redemptionId) {
                 redemptionViewModel.loadCodeById(redemptionId)
+            }
+
+            if (communityState.isReviewSheetOpen) {
+                ReviewBottomSheet(
+                    uiState          = communityState,
+                    onDismiss        = { communityViewModel.closeReviewSheet() },
+                    onRatingChanged  = communityViewModel::onRatingChanged,
+                    onCommentChanged = communityViewModel::onCommentChanged,
+                    onSubmit         = communityViewModel::submitReview,
+                )
             }
 
             QrCodeScreen(
@@ -191,7 +203,15 @@ fun AppNavGraph(
                         popUpTo(Routes.EXPLORE)
                     }
                 },
-                onRetry = { redemptionViewModel.loadCodeById(redemptionId) },
+                onRetry       = { redemptionViewModel.loadCodeById(redemptionId) },
+                onLeaveReview = code?.let { c ->
+                    {
+                        communityViewModel.openReviewSheetForRedeemed(
+                            c.promotionId,
+                            c.promotionTitle ?: "Promoción",
+                        )
+                    }
+                },
             )
         }
 

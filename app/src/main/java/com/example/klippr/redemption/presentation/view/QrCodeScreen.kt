@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,6 +55,7 @@ fun QrCodeScreen(
     onBack: () -> Unit,
     onGoToMisPromos: () -> Unit,
     onRetry: () -> Unit = {},
+    onLeaveReview: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -169,6 +171,12 @@ fun QrCodeScreen(
                     .height(52.dp),
             ) {
                 Text("Ver mis códigos", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+            }
+
+            if (onLeaveReview != null) {
+                TextButton(onClick = onLeaveReview) {
+                    Text("¿Ya lo usaste? Deja tu reseña", color = KlipprPurple, fontSize = 14.sp)
+                }
             }
         }
     }

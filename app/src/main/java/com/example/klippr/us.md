@@ -1,5 +1,12 @@
 # Klippr — User Stories & Spike Stories
 
+> Documento organizado por tipo de usuario:
+> 🟦 **CONSUMER** (Usuario) · 🟧 **BUSINESS** (Empresa) · ⬛ **TECHNICAL** (Developer)
+
+---
+
+# 🟦 CONSUMER — User Stories (Usuario)
+
 ## EP01 — Landing / Exploración
 
 | Story ID | User    | Priority | Epic  |
@@ -113,122 +120,6 @@
 - Dado una promoción disponible,
 - Cuando el usuario la guarda,
 - Entonces el sistema la registra en favoritos.
-
----
-
-## EP03 — Validación (Empresa)
-
-| Story ID | User    | Priority | Epic  |
-|----------|---------|----------|-------|
-| US-07    | Empresa | Alta     | EP03  |
-
-**Title:** Escanear QR
-
-**Description:** Como empresa, quiere escanear QR para validar descuentos.
-
-- Dado un código QR válido,
-- Cuando la empresa lo escanea,
-- Entonces el sistema valida el descuento.
-
----
-
-| Story ID | User    | Priority | Epic  |
-|----------|---------|----------|-------|
-| US-08    | Empresa | Alta     | EP03  |
-
-**Title:** Validación manual
-
-**Description:** Como empresa, quiere ingresar código manual.
-
-- Dado un código válido,
-- Cuando lo ingresa manualmente,
-- Entonces el sistema valida.
-
----
-
-| Story ID | User    | Priority | Epic  |
-|----------|---------|----------|-------|
-| US-09    | Empresa | Alta     | EP03  |
-
-**Title:** Bloquear código
-
-**Description:** Como empresa, quiere evitar reutilización.
-
-- Dado un código validado,
-- Cuando se confirma uso,
-- Entonces el sistema lo bloquea.
-
----
-
-## EP04 — Gestión de Promociones
-
-| Story ID | User    | Priority | Epic  |
-|----------|---------|----------|-------|
-| US-10    | Empresa | Alta     | EP04  |
-
-**Title:** Crear promoción
-
-**Description:** Como empresa, quiere crear promociones.
-
-- Dado datos válidos,
-- Cuando crea promoción,
-- Entonces el sistema la registra.
-
----
-
-| Story ID | User    | Priority | Epic  |
-|----------|---------|----------|-------|
-| US-11    | Empresa | Media    | EP04  |
-
-**Title:** Definir condiciones
-
-**Description:** Como empresa, quiere establecer condiciones.
-
-- Dado una promoción,
-- Cuando define condiciones,
-- Entonces se guardan.
-
----
-
-| Story ID | User    | Priority | Epic  |
-|----------|---------|----------|-------|
-| US-12    | Empresa | Media    | EP04  |
-
-**Title:** Limitar canjes
-
-**Description:** Como empresa, quiere limitar cantidad.
-
-- Dado una promoción,
-- Cuando define límite,
-- Entonces el sistema lo respeta.
-
----
-
-| Story ID | User    | Priority | Epic  |
-|----------|---------|----------|-------|
-| US-22    | Empresa | Alta     | EP04  |
-
-**Title:** Editar promoción
-
-**Description:** Como empresa, quiere modificar promociones.
-
-- Dado una promoción existente,
-- Cuando edita datos,
-- Entonces el sistema actualiza la información.
-
----
-
-| Story ID | User    | Priority | Epic  |
-|----------|---------|----------|-------|
-| US-23    | Empresa | Media    | EP04  |
-
-**Title:** Desactivar promoción
-
-**Description:** Como empresa, quiere desactivar promociones.
-
-- Dado una promoción activa,
-- Cuando la desactiva,
-- Entonces deja de estar disponible.
 
 ---
 
@@ -347,6 +238,126 @@
 - Entonces recibe enlace.
 
 ---
+
+# 🟧 BUSINESS — User Stories (Empresa)
+
+## EP03 — Validación (Empresa)
+
+| Story ID | User    | Priority | Epic  |
+|----------|---------|----------|-------|
+| US-07    | Empresa | Alta     | EP03  |
+
+**Title:** Escanear QR
+
+**Description:** Como empresa, quiere escanear QR para validar descuentos.
+
+- Dado un código QR válido,
+- Cuando la empresa lo escanea,
+- Entonces el sistema valida el descuento.
+
+---
+
+| Story ID | User    | Priority | Epic  |
+|----------|---------|----------|-------|
+| US-08    | Empresa | Alta     | EP03  |
+
+**Title:** Validación manual
+
+**Description:** Como empresa, quiere ingresar código manual.
+
+- Dado un código válido,
+- Cuando lo ingresa manualmente,
+- Entonces el sistema valida.
+
+---
+
+| Story ID | User    | Priority | Epic  |
+|----------|---------|----------|-------|
+| US-09    | Empresa | Alta     | EP03  |
+
+**Title:** Bloquear código
+
+**Description:** Como empresa, quiere evitar reutilización.
+
+- Dado un código validado,
+- Cuando se confirma uso,
+- Entonces el sistema lo bloquea.
+
+---
+
+## EP04 — Gestión de Promociones
+
+| Story ID | User    | Priority | Epic  |
+|----------|---------|----------|-------|
+| US-10    | Empresa | Alta     | EP04  |
+
+**Title:** Crear promoción
+
+**Description:** Como empresa, quiere crear promociones.
+
+- Dado datos válidos,
+- Cuando crea promoción,
+- Entonces el sistema la registra.
+
+---
+
+| Story ID | User    | Priority | Epic  |
+|----------|---------|----------|-------|
+| US-11    | Empresa | Media    | EP04  |
+
+**Title:** Definir condiciones
+
+**Description:** Como empresa, quiere establecer condiciones.
+
+- Dado una promoción,
+- Cuando define condiciones,
+- Entonces se guardan.
+
+---
+
+| Story ID | User    | Priority | Epic  |
+|----------|---------|----------|-------|
+| US-12    | Empresa | Media    | EP04  |
+
+**Title:** Limitar canjes
+
+**Description:** Como empresa, quiere limitar cantidad.
+
+- Dado una promoción,
+- Cuando define límite,
+- Entonces el sistema lo respeta.
+
+---
+
+| Story ID | User    | Priority | Epic  |
+|----------|---------|----------|-------|
+| US-22    | Empresa | Alta     | EP04  |
+
+**Title:** Editar promoción
+
+**Description:** Como empresa, quiere modificar promociones.
+
+- Dado una promoción existente,
+- Cuando edita datos,
+- Entonces el sistema actualiza la información.
+
+---
+
+| Story ID | User    | Priority | Epic  |
+|----------|---------|----------|-------|
+| US-23    | Empresa | Media    | EP04  |
+
+**Title:** Desactivar promoción
+
+**Description:** Como empresa, quiere desactivar promociones.
+
+- Dado una promoción activa,
+- Cuando la desactiva,
+- Entonces deja de estar disponible.
+
+---
+
+# ⬛ TECHNICAL — Developer Stories
 
 ## EP07 — Technical Stories
 
