@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -758,7 +759,7 @@ private fun FilterRow(
 }
 
 @Composable
-private fun FilterOptionsColumn(content: @Composable Column.() -> Unit) {
+private fun FilterOptionsColumn(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -948,7 +949,7 @@ private fun ExploreBottomBar(
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
         )
         NavigationBarItem(
-            selected = false, onClick = {},
+            selected = false, onClick = onNavigateToMisPromos,
             icon = { Icon(Icons.Default.FavoriteBorder, contentDescription = "Favoritos") },
             label = { Text("Favoritos", fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),

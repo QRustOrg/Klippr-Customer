@@ -187,15 +187,16 @@ fun AppNavGraph(
         ) { backStackEntry ->
             val redemptionId = backStackEntry.arguments?.getString(Routes.ARG_REDEMPTION_ID).orEmpty()
             val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
+            val code = redemptionState.codeById(redemptionId)
 
             LaunchedEffect(redemptionId) {
                 redemptionViewModel.loadCodeById(redemptionId)
             }
 
             QrCodeScreen(
-                code = redemptionState.codeById(redemptionId),
-                isLoading = redemptionState.isLoadingCode,
-                errorMessage = redemptionState.codeError,
+                code = code,
+                isLoading = redemptionState.isLoadingCode && code == null,
+                errorMessage = redemptionState.codeError.takeIf { code == null },
                 onBack = { navController.popBackStack() },
                 onGoToMisPromos = {
                     navController.navigate(Routes.MIS_PROMOS) {
@@ -216,6 +217,7 @@ fun AppNavGraph(
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
+                onNavigatePromos = { navController.navigate(Routes.EXPLORE) },
             )
         }
     }

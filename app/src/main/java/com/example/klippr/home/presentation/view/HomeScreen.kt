@@ -121,7 +121,7 @@ fun HomeScreen(
                 current = KlipprTab.INICIO,
                 onComunidad = onNavigateToCreate,
                 onInicio = { /* ya estamos en Home */ },
-                onFavoritos = { /* placeholder */ },
+                onFavoritos = onNavigateToMisPromos,
                 onPromos = onNavigateToExplore,
             )
         },
@@ -420,7 +420,7 @@ private fun CouponsCard(hasCoupons: Boolean, count: Int, onExplore: () -> Unit, 
         if (hasCoupons) {
             Text("Tienes $count cupón${if (count == 1) "" else "es"}", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = PurpleText)
             Spacer(Modifier.height(4.dp))
-            Text("Toca 'Promos' para verlos", fontSize = 13.sp, color = PurpleText, fontWeight = FontWeight.SemiBold)
+            Text("Toca 'Favoritos' para verlos", fontSize = 13.sp, color = PurpleText, fontWeight = FontWeight.SemiBold)
         } else {
             Text("Aun no hay Cupones", fontWeight = FontWeight.Bold, fontSize = 24.sp, color = PurpleText)
             Spacer(Modifier.height(4.dp))

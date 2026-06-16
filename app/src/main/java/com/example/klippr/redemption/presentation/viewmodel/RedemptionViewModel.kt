@@ -59,6 +59,8 @@ class RedemptionViewModel(
                     it.copy(
                         isGenerating = false,
                         generated = code,
+                        selectedCode = code,
+                        codeError = null,
                         codes = listOf(code) + it.codes.filterNot { c -> c.id == code.id },
                     )
                 }
@@ -70,7 +72,7 @@ class RedemptionViewModel(
 
     fun consumeGenerated() = _state.update { it.copy(generated = null) }
 
-    fun consumeError() = _state.update { it.copy(error = null) }
+    fun consumeError() = _state.update { it.copy(error = null, codeError = null) }
 
     /** Carga un codigo por id para abrir QR desde ruta directa o tras perder estado en memoria. */
     fun loadCodeById(id: String) {
@@ -92,6 +94,7 @@ class RedemptionViewModel(
                     it.copy(
                         isLoadingCode = false,
                         selectedCode = code,
+                        codeError = null,
                         codes = listOf(code) + it.codes.filterNot { existing -> existing.id == code.id },
                     )
                 }

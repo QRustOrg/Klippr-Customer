@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,7 +29,6 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -37,9 +38,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.domain.model.RedemptionStatus
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
@@ -61,17 +61,7 @@ import com.example.klippr.ui.theme.KlipprPurple
 private val TextSecondary = Color(0xFF888888)
 private val TextPrimary = Color(0xFF1A1A1A)
 
-/** Pestañas de "Mis Promos" mapeadas a estados de canje. */
-private enum class PromosTab(val label: String, val status: RedemptionStatus) {
-    ACTIVOS("Activos", RedemptionStatus.ACTIVE),
-    CANJEADOS("Canjeados", RedemptionStatus.REDEEMED),
-    EXPIRADOS("Expirados", RedemptionStatus.EXPIRED),
-}
-
-/**
- * "Mis Promos" (US-05 Activos · US-06 Canjeados · Expirados).
- * Carga el historial del consumidor y filtra por pestaña.
- */
+/** Mis Promos: codigos activos, historial usado y expirados en secciones verticales. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MisPromosScreen(
@@ -79,18 +69,12 @@ fun MisPromosScreen(
     onCodeClick: (String) -> Unit = {},
     onNavigateCommunity: () -> Unit = {},
     onNavigateHome: () -> Unit = {},
+    onNavigatePromos: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var selectedTab by remember { mutableStateOf(PromosTab.ACTIVOS) }
 
     LaunchedEffect(Unit) { viewModel.loadHistory() }
-
-    val codesForTab = when (selectedTab) {
-        PromosTab.ACTIVOS -> state.active
-        PromosTab.CANJEADOS -> state.redeemed
-        PromosTab.EXPIRADOS -> state.expired
-    }
 
     Scaffold(
         topBar = {
@@ -103,92 +87,92 @@ fun MisPromosScreen(
             MisPromosBottomBar(
                 onNavigateCommunity = onNavigateCommunity,
                 onNavigateHome = onNavigateHome,
+                onNavigatePromos = onNavigatePromos,
             )
         },
         containerColor = Color.White,
         modifier = modifier,
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        ) {
-            PromosTabRow(
-                selected = selectedTab,
-                activeCount = state.active.size,
-                onSelect = { selectedTab = it },
-            )
+        when {
+            state.isLoading -> Box(
+                Modifier.fillMaxSize().padding(innerPadding),
+                contentAlignment = Alignment.Center,
+            ) { CircularProgressIndicator(color = KlipprPurple) }
 
-            when {
-                state.isLoading -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator(color = KlipprPurple) }
+            state.error != null -> Box(
+                Modifier.fillMaxSize().padding(innerPadding).padding(32.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text(state.error!!, color = TextSecondary) }
 
-                state.error != null -> Box(
-                    Modifier.fillMaxSize().padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) { Text(state.error!!, color = TextSecondary) }
-
-                codesForTab.isEmpty() -> Box(
-                    Modifier.fillMaxSize().padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        "No tienes códigos ${selectedTab.label.lowercase()}",
-                        color = TextSecondary,
-                        fontSize = 15.sp,
-                    )
-                }
-
-                else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                ) {
-                    items(codesForTab, key = { it.id }) { code ->
-                        RedemptionCard(code = code, onClick = { onCodeClick(code.id) })
-                    }
-                }
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                redemptionSection(
+                    title = "Códigos activos",
+                    emptyText = "No tienes códigos activos",
+                    codes = state.active,
+                    onCodeClick = onCodeClick,
+                )
+                redemptionSection(
+                    title = "Historial usado",
+                    emptyText = "Aún no tienes descuentos usados",
+                    codes = state.redeemed,
+                    onCodeClick = onCodeClick,
+                )
+                redemptionSection(
+                    title = "Expirados",
+                    emptyText = "No tienes códigos expirados",
+                    codes = state.expired,
+                    onCodeClick = onCodeClick,
+                )
             }
         }
     }
 }
 
-@Composable
-private fun PromosTabRow(
-    selected: PromosTab,
-    activeCount: Int,
-    onSelect: (PromosTab) -> Unit,
+private fun LazyListScope.redemptionSection(
+    title: String,
+    emptyText: String,
+    codes: List<RedemptionCode>,
+    onCodeClick: (String) -> Unit,
 ) {
-    Row(
+    item(key = "${title}_header") {
+        SectionHeader(title = title, count = codes.size)
+    }
+    if (codes.isEmpty()) {
+        item(key = "${title}_empty") {
+            EmptySectionMessage(emptyText)
+        }
+    } else {
+        items(codes, key = { "${title}_${it.id}" }) { code ->
+            RedemptionCard(code = code, onClick = { onCodeClick(code.id) })
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, count: Int) {
+    Text(
+        text = "$title ($count)",
+        fontWeight = FontWeight.Bold,
+        fontSize = 19.sp,
+        color = TextPrimary,
+        modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
+    )
+}
+
+@Composable
+private fun EmptySectionMessage(text: String) {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFFF7F7F7))
+            .padding(horizontal = 16.dp, vertical = 18.dp),
     ) {
-        PromosTab.entries.forEach { tab ->
-            val isSelected = tab == selected
-            val label = if (tab == PromosTab.ACTIVOS) "${tab.label} ($activeCount)" else tab.label
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = label,
-                    fontSize = 17.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) KlipprPurple else TextSecondary,
-                    modifier = Modifier.clickable { onSelect(tab) },
-                )
-                Spacer(Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .height(2.dp)
-                        .width(if (isSelected) (label.length * 8).dp else 0.dp)
-                        .background(if (isSelected) KlipprPurple else Color.Transparent),
-                )
-            }
-        }
+        Text(text, color = TextSecondary, fontSize = 14.sp)
     }
 }
 
@@ -203,7 +187,6 @@ private fun RedemptionCard(code: RedemptionCode, onClick: () -> Unit) {
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Miniatura QR en tile blanco con sombra
         Box(
             modifier = Modifier
                 .size(140.dp)
@@ -247,7 +230,7 @@ private fun RedemptionCard(code: RedemptionCode, onClick: () -> Unit) {
 
             Spacer(Modifier.height(10.dp))
             Text(
-                text = "Vence: ${formatVence(code.expiresAt)}",
+                text = code.dateLabel(),
                 fontSize = 13.sp,
                 color = TextSecondary,
             )
@@ -276,6 +259,7 @@ private fun StatusPill(status: RedemptionStatus) {
 private fun MisPromosBottomBar(
     onNavigateCommunity: () -> Unit,
     onNavigateHome: () -> Unit,
+    onNavigatePromos: () -> Unit,
 ) {
     val inactive = TextSecondary
     NavigationBar(containerColor = Color.White, tonalElevation = 4.dp) {
@@ -292,29 +276,36 @@ private fun MisPromosBottomBar(
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
         )
         NavigationBarItem(
-            selected = false, onClick = {},
+            selected = true, onClick = {},
             icon = { Icon(Icons.Default.FavoriteBorder, contentDescription = "Favoritos") },
             label = { Text("Favoritos", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = KlipprPurple,
+                selectedTextColor = KlipprPurple,
+                indicatorColor = KlipprLavender,
+                unselectedIconColor = inactive,
+                unselectedTextColor = inactive,
+            ),
         )
         NavigationBarItem(
-            selected = true, onClick = {},
+            selected = false, onClick = onNavigatePromos,
             icon = { Icon(Icons.Default.Apps, contentDescription = "Promos") },
             label = { Text("Promos", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = KlipprPurple, selectedTextColor = KlipprPurple,
-                indicatorColor = KlipprLavender,
-                unselectedIconColor = inactive, unselectedTextColor = inactive,
-            ),
+            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
         )
     }
 }
 
-// Etiqueta corta del descuento para la tarjeta cuando no hay título de promo.
 private fun RedemptionCode.discountLabel(): String {
     val value = discountValue ?: discountAppliedAmount
     return when (discountType) {
-        com.example.klippr.promotions.domain.model.DiscountType.FIXED_AMOUNT -> "S/ ${value.toInt()} OFF"
+        DiscountType.FIXED_AMOUNT -> "S/ ${value.toInt()} OFF"
         else -> "${value.toInt()}% OFF"
     }
+}
+
+private fun RedemptionCode.dateLabel(): String = when (status) {
+    RedemptionStatus.REDEEMED -> "Usado: ${formatVence(redeemedAt)}"
+    RedemptionStatus.EXPIRED -> "Venció: ${formatVence(expiresAt)}"
+    RedemptionStatus.ACTIVE -> "Vence: ${formatVence(expiresAt)}"
 }
