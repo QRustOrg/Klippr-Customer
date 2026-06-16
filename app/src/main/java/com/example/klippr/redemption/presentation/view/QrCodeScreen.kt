@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,8 +49,11 @@ import com.example.klippr.ui.theme.KlipprPurple
 @Composable
 fun QrCodeScreen(
     code: RedemptionCode?,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
     onBack: () -> Unit,
     onGoToMisPromos: () -> Unit,
+    onRetry: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -67,6 +71,33 @@ fun QrCodeScreen(
         containerColor = Color.White,
         modifier = modifier,
     ) { innerPadding ->
+        if (isLoading) {
+            Box(
+                Modifier.fillMaxSize().padding(innerPadding).padding(32.dp),
+                contentAlignment = Alignment.Center,
+            ) { CircularProgressIndicator(color = KlipprPurple) }
+            return@Scaffold
+        }
+
+        if (errorMessage != null) {
+            Column(
+                Modifier.fillMaxSize().padding(innerPadding).padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(errorMessage, color = Color(0xFFD3503F), textAlign = TextAlign.Center)
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = onRetry,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = KlipprPurple),
+                ) {
+                    Text("Reintentar", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+            return@Scaffold
+        }
+
         if (code == null) {
             Box(
                 Modifier.fillMaxSize().padding(innerPadding).padding(32.dp),

@@ -6,6 +6,7 @@ import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.redemption.domain.usecase.GenerateRedemptionUseCase
 import com.example.klippr.redemption.domain.usecase.GetConsumerRedemptionsUseCase
+import com.example.klippr.redemption.domain.usecase.GetRedemptionByIdUseCase
 import com.example.klippr.redemption.presentation.state.RedemptionUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 class RedemptionViewModel(
     private val generateRedemption: GenerateRedemptionUseCase,
     private val getConsumerRedemptions: GetConsumerRedemptionsUseCase,
+    private val getRedemptionById: GetRedemptionByIdUseCase,
     private val getCurrentUser: GetCurrentUserUseCase,
 ) : ViewModel() {
 
@@ -69,4 +71,38 @@ class RedemptionViewModel(
     fun consumeGenerated() = _state.update { it.copy(generated = null) }
 
     fun consumeError() = _state.update { it.copy(error = null) }
+
+    /** Carga un codigo por id para abrir QR desde ruta directa o tras perder estado en memoria. */
+    fun loadCodeById(id: String) {
+        if (id.isBlank()) {
+            _state.update { it.copy(isLoadingCode = false, selectedCode = null, codeError = "Codigo no encontrado") }
+            return
+        }
+
+        _state.value.codeById(id)?.let { cached ->
+            _state.update { it.copy(isLoadingCode = false, selectedCode = cached, codeError = null) }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingCode = true, selectedCode = null, codeError = null) }
+            try {
+                val code = getRedemptionById(id)
+                _state.update {
+                    it.copy(
+                        isLoadingCode = false,
+                        selectedCode = code,
+                        codes = listOf(code) + it.codes.filterNot { existing -> existing.id == code.id },
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        isLoadingCode = false,
+                        codeError = e.message ?: "Error al cargar codigo",
+                    )
+                }
+            }
+        }
+    }
 }

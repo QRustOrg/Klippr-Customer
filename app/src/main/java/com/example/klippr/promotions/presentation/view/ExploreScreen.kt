@@ -43,6 +43,8 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
@@ -105,19 +107,25 @@ private val TextSecondary = Color(0xFF888888)
 /** Estado local de los filtros activos en la pantalla de exploración (US-02). */
 private data class ExploreFilterState(
     val discountType: DiscountType? = null,
+    val selectedCategory: PromotionCategory? = null,
+    val selectedLocation: String? = null,
     val availableOnly: Boolean = false,
     val sortByPopularity: Boolean = false,
-    val hasLocationOnly: Boolean = false,
 ) {
     val isActive: Boolean
-        get() = discountType != null || availableOnly || sortByPopularity || hasLocationOnly
+        get() = discountType != null ||
+            selectedCategory != null ||
+            selectedLocation != null ||
+            availableOnly ||
+            sortByPopularity
 
     // Número de filtros activos para el badge del botón de filtro.
     val activeCount: Int
         get() = (if (discountType != null) 1 else 0) +
+            (if (selectedCategory != null) 1 else 0) +
+            (if (selectedLocation != null) 1 else 0) +
             (if (availableOnly) 1 else 0) +
-            (if (sortByPopularity) 1 else 0) +
-            (if (hasLocationOnly) 1 else 0)
+            (if (sortByPopularity) 1 else 0)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -160,10 +168,23 @@ fun ExploreScreen(
     val filteredPromos = remember(state.promotions, filterState) {
         var result = state.promotions
         filterState.discountType?.let { dt -> result = result.filter { it.discountType == dt } }
+        filterState.selectedCategory?.let { category -> result = result.filter { it.category == category } }
+        filterState.selectedLocation?.let { location ->
+            result = result.filter { it.locationName?.trim() == location }
+        }
         if (filterState.availableOnly) result = result.filter { it.availableRedemptions > it.currentRedemptions }
         if (filterState.sortByPopularity) result = result.sortedByDescending { it.rating ?: 0.0 }
-        if (filterState.hasLocationOnly) result = result.filter { it.locationName != null }
         result
+    }
+
+    val availableCategories = remember(state.promotions) {
+        PromotionCategory.entries.filter { category -> state.promotions.any { it.category == category } }
+    }
+    val availableLocations = remember(state.promotions) {
+        state.promotions
+            .mapNotNull { it.locationName?.trim()?.takeIf(String::isNotBlank) }
+            .distinct()
+            .sorted()
     }
 
     val groupedPromos = remember(filteredPromos) { filteredPromos.groupBy { it.category } }
@@ -300,6 +321,8 @@ fun ExploreScreen(
             ) {
                 FilterPanel(
                     filterState = filterState,
+                    availableCategories = availableCategories,
+                    availableLocations = availableLocations,
                     onDiscountTypeClick = {
                         filterState = filterState.copy(
                             discountType = when (filterState.discountType) {
@@ -315,8 +338,15 @@ fun ExploreScreen(
                     onPopularityClick = {
                         filterState = filterState.copy(sortByPopularity = !filterState.sortByPopularity)
                     },
-                    onLocationClick = {
-                        filterState = filterState.copy(hasLocationOnly = !filterState.hasLocationOnly)
+                    onCategoryClick = { category ->
+                        filterState = filterState.copy(
+                            selectedCategory = category.takeIf { it != filterState.selectedCategory },
+                        )
+                    },
+                    onLocationClick = { location ->
+                        filterState = filterState.copy(
+                            selectedLocation = location.takeIf { it != filterState.selectedLocation },
+                        )
                     },
                 )
             }
@@ -581,11 +611,17 @@ private fun ExploreSearchRow(
 @Composable
 private fun FilterPanel(
     filterState: ExploreFilterState,
+    availableCategories: List<PromotionCategory>,
+    availableLocations: List<String>,
     onDiscountTypeClick: () -> Unit,
     onAvailabilityClick: () -> Unit,
     onPopularityClick: () -> Unit,
-    onLocationClick: () -> Unit,
+    onCategoryClick: (PromotionCategory) -> Unit,
+    onLocationClick: (String) -> Unit,
 ) {
+    var isCategoryExpanded by remember { mutableStateOf(false) }
+    var isLocationExpanded by remember { mutableStateOf(false) }
+
     Card(
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
@@ -605,6 +641,52 @@ private fun FilterPanel(
             )
             HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 0.5.dp)
             FilterRow(
+                label = "Categoría",
+                isActive = filterState.selectedCategory != null,
+                badge = filterState.selectedCategory?.displayName(),
+                isExpanded = isCategoryExpanded,
+                onClick = { isCategoryExpanded = !isCategoryExpanded },
+            )
+            AnimatedVisibility(visible = isCategoryExpanded) {
+                FilterOptionsColumn {
+                    if (availableCategories.isEmpty()) {
+                        EmptyFilterOption("Sin categorías")
+                    } else {
+                        availableCategories.forEach { category ->
+                            FilterOptionRow(
+                                label = category.displayName(),
+                                isSelected = filterState.selectedCategory == category,
+                                onClick = { onCategoryClick(category) },
+                            )
+                        }
+                    }
+                }
+            }
+            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 0.5.dp)
+            FilterRow(
+                label = "Ubicación",
+                isActive = filterState.selectedLocation != null,
+                badge = filterState.selectedLocation,
+                isExpanded = isLocationExpanded,
+                onClick = { isLocationExpanded = !isLocationExpanded },
+            )
+            AnimatedVisibility(visible = isLocationExpanded) {
+                FilterOptionsColumn {
+                    if (availableLocations.isEmpty()) {
+                        EmptyFilterOption("Sin ubicaciones")
+                    } else {
+                        availableLocations.forEach { location ->
+                            FilterOptionRow(
+                                label = location,
+                                isSelected = filterState.selectedLocation == location,
+                                onClick = { onLocationClick(location) },
+                            )
+                        }
+                    }
+                }
+            }
+            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 0.5.dp)
+            FilterRow(
                 label = "Disponibilidad",
                 isActive = filterState.availableOnly,
                 badge = if (filterState.availableOnly) "Con cupo" else null,
@@ -617,13 +699,6 @@ private fun FilterPanel(
                 badge = if (filterState.sortByPopularity) "Mayor rating" else null,
                 onClick = onPopularityClick,
             )
-            HorizontalDivider(color = Color(0xFFF0F0F0), thickness = 0.5.dp)
-            FilterRow(
-                label = "Ubicación",
-                isActive = filterState.hasLocationOnly,
-                badge = if (filterState.hasLocationOnly) "Con dirección" else null,
-                onClick = onLocationClick,
-            )
         }
     }
 }
@@ -633,6 +708,7 @@ private fun FilterRow(
     label: String,
     isActive: Boolean,
     badge: String?,
+    isExpanded: Boolean? = null,
     onClick: () -> Unit,
 ) {
     Row(
@@ -643,7 +719,7 @@ private fun FilterRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 fontSize = 15.sp,
@@ -651,18 +727,89 @@ private fun FilterRow(
                 fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
             )
             if (badge != null) {
-                Text(badge, fontSize = 11.sp, color = KlipprPurple)
+                Text(
+                    text = badge,
+                    fontSize = 11.sp,
+                    color = KlipprPurple,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
-        if (isActive) {
+        when {
+            isExpanded != null -> {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = if (isActive) KlipprPurple else TextSecondary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            isActive -> {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = KlipprPurple,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterOptionsColumn(content: @Composable Column.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFBF8FF))
+            .padding(vertical = 4.dp),
+        content = content,
+    )
+}
+
+@Composable
+private fun FilterOptionRow(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 32.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            color = if (isSelected) KlipprPurple else TextPrimary,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        if (isSelected) {
             Icon(
                 Icons.Default.Check,
                 contentDescription = null,
                 tint = KlipprPurple,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(16.dp),
             )
         }
     }
+}
+
+@Composable
+private fun EmptyFilterOption(label: String) {
+    Text(
+        text = label,
+        fontSize = 13.sp,
+        color = TextSecondary,
+        modifier = Modifier.padding(start = 32.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
+    )
 }
 
 @Composable

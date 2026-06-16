@@ -34,6 +34,7 @@ import com.example.klippr.redemption.data.mapper.RedemptionMapper
 import com.example.klippr.redemption.data.repository.RedemptionRepositoryImpl
 import com.example.klippr.redemption.domain.usecase.GenerateRedemptionUseCase
 import com.example.klippr.redemption.domain.usecase.GetConsumerRedemptionsUseCase
+import com.example.klippr.redemption.domain.usecase.GetRedemptionByIdUseCase
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.ui.theme.KlipprTheme
 
@@ -105,6 +106,7 @@ class MainActivity : ComponentActivity() {
                 return RedemptionViewModel(
                     generateRedemption = GenerateRedemptionUseCase(repository),
                     getConsumerRedemptions = GetConsumerRedemptionsUseCase(repository),
+                    getRedemptionById = GetRedemptionByIdUseCase(repository),
                     getCurrentUser = GetCurrentUserUseCase(authRepository),
                 ) as T
             }
