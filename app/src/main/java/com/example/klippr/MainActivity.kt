@@ -17,6 +17,11 @@ import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
 import com.example.klippr.core.database.KlipprDatabase
 import com.example.klippr.core.datastore.SessionDataStore
 import com.example.klippr.core.network.NetworkModule
+import com.example.klippr.favorites.data.repository.FavoriteRepositoryImpl
+import com.example.klippr.favorites.domain.usecase.GetUserFavoritesUseCase
+import com.example.klippr.favorites.domain.usecase.RemoveFavoriteUseCase
+import com.example.klippr.favorites.domain.usecase.SaveFavoriteUseCase
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.iam.data.repository.AuthRepositoryImpl
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
 import com.example.klippr.iam.domain.usecase.ResetPasswordUseCase
@@ -130,6 +135,20 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val favoriteViewModel: FavoriteViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                val repository = FavoriteRepositoryImpl(network.favoriteApi)
+                return FavoriteViewModel(
+                    getUserFavorites = GetUserFavoritesUseCase(repository),
+                    saveFavorite     = SaveFavoriteUseCase(repository),
+                    removeFavorite   = RemoveFavoriteUseCase(repository),
+                ) as T
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -141,6 +160,7 @@ class MainActivity : ComponentActivity() {
                     viewModel           = viewModel,
                     redemptionViewModel = redemptionViewModel,
                     communityViewModel  = communityViewModel,
+                    favoriteViewModel   = favoriteViewModel,
                     sessionStore        = sessionStore,
                 )
             }

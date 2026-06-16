@@ -28,7 +28,10 @@ import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -36,34 +39,53 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.community.presentation.view.ReviewBottomSheet
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
 import com.example.klippr.promotions.domain.model.DiscountType
+import com.example.klippr.promotions.presentation.view.rememberPromoDrawableId
 import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.domain.model.RedemptionStatus
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
+import com.example.klippr.redemption.util.dayBucket
+import com.example.klippr.redemption.util.formatHora
 import com.example.klippr.redemption.util.formatVence
 import com.example.klippr.redemption.util.generateQrBitmap
 import com.example.klippr.ui.theme.KlipprLavender
 import com.example.klippr.ui.theme.KlipprPurple
+import java.time.Instant
 
 // @author Samuel Bonifacio
 
 private val TextSecondary = Color(0xFF888888)
 private val TextPrimary = Color(0xFF1A1A1A)
+private val ActiveGreenBg = Color(0xFFB9F6CA)
+private val ActiveGreenFg = Color(0xFF1B7A3D)
+private val SavingsGreen = Color(0xFF1E9E54)
+private val CanjeadoBlueBg = Color(0xFFCFE6FF)
+private val CanjeadoBlueFg = Color(0xFF1565C0)
+
+private enum class Periodo(val label: String) { TODOS("Todos"), HOY("Hoy"), SEMANA("Esta semana"), MES("Este mes") }
+private enum class OrdenMonto(val label: String) { NINGUNO("Sin orden"), MAYOR("Mayor a menor"), MENOR("Menor a mayor") }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +104,8 @@ fun MisPromosScreen(
 
     LaunchedEffect(Unit) { viewModel.loadHistory() }
 
+    var selectedTab by remember { mutableIntStateOf(0) }
+
     // US-13: ReviewBottomSheet como modal sobre MisPromos
     if (communityUiState.isReviewSheetOpen) {
         ReviewBottomSheet(
@@ -89,7 +113,7 @@ fun MisPromosScreen(
             onDismiss = { communityViewModel.closeReviewSheet() },
             onRatingChanged = communityViewModel::onRatingChanged,
             onCommentChanged = communityViewModel::onCommentChanged,
-            onSubmit = communityViewModel::submitReview
+            onSubmit = communityViewModel::submitReview,
         )
     }
 
@@ -110,112 +134,128 @@ fun MisPromosScreen(
         containerColor = Color.White,
         modifier = modifier,
     ) { innerPadding ->
-        when {
-            state.isLoading -> Box(
-                Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator(color = KlipprPurple) }
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            PromosTabRow(
+                selected = selectedTab,
+                counts = intArrayOf(state.active.size, state.redeemed.size, state.expired.size),
+                onSelect = { selectedTab = it },
+            )
 
-            state.error != null -> Box(
-                Modifier.fillMaxSize().padding(innerPadding).padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) { Text(state.error!!, color = TextSecondary) }
+            when {
+                state.isLoading -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator(color = KlipprPurple) }
 
-            else -> LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                redemptionSection(
-                    title = "Códigos activos",
-                    emptyText = "No tienes códigos activos",
-                    codes = state.active,
-                    onCodeClick = onCodeClick,
-                    onLeaveReview = { code ->
-                        communityViewModel.openReviewSheetForRedeemed(
-                            code.promotionId,
-                            code.promotionTitle ?: "Promoción"
-                        )
-                    },
-                )
-                redemptionSection(
-                    title = "Historial usado",
-                    emptyText = "Aún no tienes descuentos usados",
-                    codes = state.redeemed,
-                    onCodeClick = onCodeClick,
-                    onLeaveReview = { code ->
-                        communityViewModel.openReviewSheetForRedeemed(
-                            code.promotionId,
-                            code.promotionTitle ?: "Promoción"
-                        )
-                    },
-                )
-                redemptionSection(
-                    title = "Expirados",
-                    emptyText = "No tienes códigos expirados",
-                    codes = state.expired,
-                    onCodeClick = onCodeClick,
-                    onLeaveReview = null,
-                )
+                state.error != null -> Box(
+                    Modifier.fillMaxSize().padding(32.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text(state.error!!, color = TextSecondary) }
+
+                else -> when (selectedTab) {
+                    0 -> QrCardsList(
+                        codes = state.active,
+                        emptyText = "No tienes códigos activos",
+                        onCodeClick = onCodeClick,
+                        onMarkRedeemed = { code -> viewModel.markRedeemed(code) },
+                        isBusy = state.isGenerating,
+                    )
+                    1 -> HistorialList(
+                        codes = state.redeemed,
+                        onCodeClick = onCodeClick,
+                        onLeaveReview = { code ->
+                            communityViewModel.openReviewSheetForRedeemed(
+                                code.promotionId,
+                                code.promotionTitle ?: "Promoción",
+                            )
+                        },
+                    )
+                    else -> QrCardsList(
+                        codes = state.expired,
+                        emptyText = "No tienes códigos expirados",
+                        onCodeClick = onCodeClick,
+                        onMarkRedeemed = null,
+                        isBusy = false,
+                    )
+                }
             }
         }
     }
 }
 
-private fun LazyListScope.redemptionSection(
-    title: String,
-    emptyText: String,
-    codes: List<RedemptionCode>,
-    onCodeClick: (String) -> Unit,
-    onLeaveReview: ((RedemptionCode) -> Unit)?,
-) {
-    item(key = "${title}_header") {
-        SectionHeader(title = title, count = codes.size)
-    }
-    if (codes.isEmpty()) {
-        item(key = "${title}_empty") {
-            EmptySectionMessage(emptyText)
+// Fila de tabs estilo mockup: el seleccionado muestra su conteo y subrayado morado.
+@Composable
+private fun PromosTabRow(selected: Int, counts: IntArray, onSelect: (Int) -> Unit) {
+    val labels = listOf("Activos", "Canjeados", "Expirados")
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        labels.forEachIndexed { i, label ->
+            val isSel = i == selected
+            val text = if (isSel) "$label (${counts[i]})" else label
+            Column(
+                modifier = Modifier.weight(1f).clickable { onSelect(i) },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = text,
+                    color = if (isSel) KlipprPurple else TextSecondary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    maxLines = 1,
+                )
+                Spacer(Modifier.height(6.dp))
+                if (isSel) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.8f)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(KlipprPurple),
+                    )
+                }
+            }
         }
-    } else {
-        items(codes, key = { "${title}_${it.id}" }) { code ->
-            RedemptionCard(
+    }
+}
+
+// ---------- Activos / Expirados: tarjetas con QR (mockup 2) ----------
+
+@Composable
+private fun QrCardsList(
+    codes: List<RedemptionCode>,
+    emptyText: String,
+    onCodeClick: (String) -> Unit,
+    onMarkRedeemed: ((RedemptionCode) -> Unit)?,
+    isBusy: Boolean,
+) {
+    if (codes.isEmpty()) {
+        EmptyMessage(emptyText)
+        return
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        items(codes, key = { it.id }) { code ->
+            QrCard(
                 code = code,
                 onClick = { onCodeClick(code.id) },
-                onLeaveReview = onLeaveReview?.let { cb -> { cb(code) } },
+                onMarkRedeemed = onMarkRedeemed?.let { cb -> { cb(code) } },
+                isBusy = isBusy,
             )
         }
     }
 }
 
 @Composable
-private fun SectionHeader(title: String, count: Int) {
-    Text(
-        text = "$title ($count)",
-        fontWeight = FontWeight.Bold,
-        fontSize = 19.sp,
-        color = TextPrimary,
-        modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
-    )
-}
-
-@Composable
-private fun EmptySectionMessage(text: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFFF7F7F7))
-            .padding(horizontal = 16.dp, vertical = 18.dp),
-    ) {
-        Text(text, color = TextSecondary, fontSize = 14.sp)
-    }
-}
-
-@Composable
-private fun RedemptionCard(
+private fun QrCard(
     code: RedemptionCode,
     onClick: () -> Unit,
-    onLeaveReview: (() -> Unit)?,
+    onMarkRedeemed: (() -> Unit)?,
+    isBusy: Boolean,
 ) {
     Column(
         modifier = Modifier
@@ -227,10 +267,7 @@ private fun RedemptionCard(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color.White),
+                modifier = Modifier.size(140.dp).clip(RoundedCornerShape(18.dp)).background(Color.White),
                 contentAlignment = Alignment.Center,
             ) {
                 val qr = remember(code.qrContent) { generateQrBitmap(code.qrContent, 220) }
@@ -240,9 +277,7 @@ private fun RedemptionCard(
                     Icon(Icons.Default.QrCode2, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(96.dp))
                 }
             }
-
             Spacer(Modifier.width(12.dp))
-
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -259,36 +294,298 @@ private fun RedemptionCard(
                     Spacer(Modifier.width(8.dp))
                     StatusPill(code.status)
                 }
-
                 Spacer(Modifier.height(8.dp))
-                Text(
-                    text = code.promotionTitle ?: code.discountLabel(),
-                    fontSize = 16.sp,
-                    color = TextPrimary,
-                )
-
+                Text(text = code.promotionTitle ?: code.discountLabel(), fontSize = 16.sp, color = TextPrimary)
                 Spacer(Modifier.height(10.dp))
+                Text(text = code.dateLabel(), fontSize = 13.sp, color = TextSecondary)
+            }
+        }
+        // US-06: marcar como canjeado (llama al endpoint /confirm)
+        if (onMarkRedeemed != null) {
+            TextButton(
+                onClick = onMarkRedeemed,
+                enabled = !isBusy,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text("Marcar como canjeado", color = KlipprPurple, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+// ---------- Canjeados: layout Historial agrupado por día (mockup 3) ----------
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistorialList(
+    codes: List<RedemptionCode>,
+    onCodeClick: (String) -> Unit,
+    onLeaveReview: (RedemptionCode) -> Unit,
+) {
+    var filterOpen by remember { mutableStateOf(false) }
+    var negocio by remember { mutableStateOf<String?>(null) }
+    var periodo by remember { mutableStateOf(Periodo.TODOS) }
+    var orden by remember { mutableStateOf(OrdenMonto.NINGUNO) }
+
+    val negocios = remember(codes) {
+        codes.mapNotNull { it.businessName ?: it.promotionTitle }.distinct()
+    }
+    val filtered = remember(codes, negocio, periodo, orden) {
+        applyFilters(codes, negocio, periodo, orden)
+    }
+
+    if (filterOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { filterOpen = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Color.White,
+        ) {
+            FilterSheet(
+                negocios = negocios,
+                negocioSel = negocio, onNegocio = { negocio = it },
+                periodoSel = periodo, onPeriodo = { periodo = it },
+                ordenSel = orden, onOrden = { orden = it },
+                onLimpiar = { negocio = null; periodo = Periodo.TODOS; orden = OrdenMonto.NINGUNO },
+            )
+        }
+    }
+
+    if (codes.isEmpty()) {
+        EmptyMessage("Aún no tienes canjes. Marca un código activo como canjeado.")
+        return
+    }
+
+    // Agrupa preservando el orden ya filtrado/ordenado.
+    val groups = filtered.groupBy { dayBucket(it.redeemedAt) }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item(key = "filtrar_bar") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = { filterOpen = true }) {
+                    Text("Filtrar", color = KlipprPurple, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+        }
+        if (filtered.isEmpty()) {
+            item(key = "no_match") { EmptyMessage("Ningún canje coincide con el filtro") }
+        }
+        groups.forEach { (bucket, items) ->
+            item(key = "h_$bucket") {
                 Text(
-                    text = code.dateLabel(),
-                    fontSize = 13.sp,
+                    text = bucket,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
                     color = TextSecondary,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
+                )
+            }
+            items(items, key = { it.id }) { code ->
+                HistorialCard(
+                    code = code,
+                    onClick = { onCodeClick(code.id) },
+                    onLeaveReview = { onLeaveReview(code) },
                 )
             }
         }
+    }
+}
 
-        // US-13: botón "Dejar reseña" solo en canjes usados
-        if (onLeaveReview != null) {
-            TextButton(
-                onClick = onLeaveReview,
-                modifier = Modifier.align(Alignment.End),
+private fun applyFilters(
+    codes: List<RedemptionCode>,
+    negocio: String?,
+    periodo: Periodo,
+    orden: OrdenMonto,
+): List<RedemptionCode> {
+    val now = Instant.now()
+    val cutoff = when (periodo) {
+        Periodo.TODOS -> null
+        Periodo.HOY -> now.minusSeconds(86_400)
+        Periodo.SEMANA -> now.minusSeconds(7 * 86_400)
+        Periodo.MES -> now.minusSeconds(30 * 86_400)
+    }
+    var out = codes
+    if (negocio != null) {
+        out = out.filter { (it.businessName ?: it.promotionTitle) == negocio }
+    }
+    if (cutoff != null) {
+        out = out.filter { it.redeemedAt != null && it.redeemedAt.isAfter(cutoff) }
+    }
+    out = when (orden) {
+        OrdenMonto.NINGUNO -> out.sortedByDescending { it.redeemedAt ?: Instant.MIN }
+        OrdenMonto.MAYOR -> out.sortedByDescending { it.discountAppliedAmount }
+        OrdenMonto.MENOR -> out.sortedBy { it.discountAppliedAmount }
+    }
+    return out
+}
+
+@Composable
+private fun HistorialCard(
+    code: RedemptionCode,
+    onClick: () -> Unit,
+    onLeaveReview: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Imagen de la promo (placeholder si no hay drawable)
+            Box(
+                modifier = Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFE4DCFB)),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "Dejar reseña",
-                    color = KlipprPurple,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                )
+                val resId = rememberPromoDrawableId(code.imageKey)
+                if (resId != 0) {
+                    Image(
+                        painter = painterResource(resId),
+                        contentDescription = code.promotionTitle,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(Icons.Default.QrCode2, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(48.dp))
+                }
             }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = code.businessName ?: code.promotionTitle ?: "Promoción",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 19.sp,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "${code.discountLabel()} - ${formatHora(code.redeemedAt)}",
+                    fontSize = 15.sp,
+                    color = TextPrimary,
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "-S/%.2f".format(code.discountAppliedAmount),
+                        color = SavingsGreen,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                    )
+                    CanjeadoPill()
+                }
+            }
+        }
+        // US-13: dejar reseña de una promo usada
+        TextButton(onClick = onLeaveReview, modifier = Modifier.align(Alignment.End)) {
+            Text("Dejar reseña", color = KlipprPurple, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterSheet(
+    negocios: List<String>,
+    negocioSel: String?, onNegocio: (String?) -> Unit,
+    periodoSel: Periodo, onPeriodo: (Periodo) -> Unit,
+    ordenSel: OrdenMonto, onOrden: (OrdenMonto) -> Unit,
+    onLimpiar: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Filtrar", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary)
+            TextButton(onClick = onLimpiar) { Text("Limpiar", color = KlipprPurple, fontWeight = FontWeight.SemiBold) }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        FilterGroupLabel("Negocio")
+        ChipFlow {
+            ChoiceChip(label = "Todos", selected = negocioSel == null) { onNegocio(null) }
+            negocios.forEach { n ->
+                ChoiceChip(label = n, selected = negocioSel == n) { onNegocio(n) }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        FilterGroupLabel("Periodo")
+        ChipFlow {
+            Periodo.entries.forEach { p ->
+                ChoiceChip(label = p.label, selected = periodoSel == p) { onPeriodo(p) }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        FilterGroupLabel("Ordenar por ahorro")
+        ChipFlow {
+            OrdenMonto.entries.forEach { o ->
+                ChoiceChip(label = o.label, selected = ordenSel == o) { onOrden(o) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterGroupLabel(text: String) {
+    Text(text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextSecondary, modifier = Modifier.padding(bottom = 6.dp))
+}
+
+// Flujo simple de chips en filas (wrap automático).
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ChipFlow(content: @Composable () -> Unit) {
+    androidx.compose.foundation.layout.FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) { content() }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChoiceChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = KlipprLavender,
+            selectedLabelColor = KlipprPurple,
+        ),
+    )
+}
+
+// ---------- compartidos ----------
+
+@Composable
+private fun EmptyMessage(text: String) {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xFFF7F7F7))
+                .padding(horizontal = 16.dp, vertical = 18.dp),
+        ) {
+            Text(text, color = TextSecondary, fontSize = 14.sp)
         }
     }
 }
@@ -296,17 +593,23 @@ private fun RedemptionCard(
 @Composable
 private fun StatusPill(status: RedemptionStatus) {
     val (text, bg, fg) = when (status) {
-        RedemptionStatus.ACTIVE -> Triple("Activo", Color(0xFFB9F6CA), Color(0xFF1B7A3D))
-        RedemptionStatus.REDEEMED -> Triple("Canjeado", KlipprLavender, KlipprPurple)
+        RedemptionStatus.ACTIVE -> Triple("Activo", ActiveGreenBg, ActiveGreenFg)
+        RedemptionStatus.REDEEMED -> Triple("Canjeado", CanjeadoBlueBg, CanjeadoBlueFg)
         RedemptionStatus.EXPIRED -> Triple("Expirado", Color(0xFFEEEEEE), TextSecondary)
     }
     Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(bg)
-            .padding(horizontal = 16.dp, vertical = 7.dp),
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(bg).padding(horizontal = 16.dp, vertical = 7.dp),
     ) {
         Text(text, color = fg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun CanjeadoPill() {
+    Box(
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(CanjeadoBlueBg).padding(horizontal = 16.dp, vertical = 7.dp),
+    ) {
+        Text("Canjeado", color = CanjeadoBlueFg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
 }
 

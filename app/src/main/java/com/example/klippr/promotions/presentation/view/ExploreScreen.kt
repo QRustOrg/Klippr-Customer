@@ -139,6 +139,7 @@ fun ExploreScreen(
     onNavigateToHome: () -> Unit = {},
     onNavigateToCommunity: () -> Unit = {},
     onNavigateToMisPromos: () -> Unit = {},
+    onAddFavorite: (promotionId: String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.listState.collectAsStateWithLifecycle()
@@ -364,7 +365,10 @@ fun ExploreScreen(
                     isGenerating = redemptionState.isGenerating,
                     errorMessage = redemptionState.error,
                     onDismiss = { selectedPromoId = null; redemptionViewModel.consumeError() },
-                    onToggleFavorite = { viewModel.toggleFavorite(selectedPromo.id, !selectedPromo.isFavorite) },
+                    onToggleFavorite = {
+                        viewModel.toggleFavorite(selectedPromo.id, !selectedPromo.isFavorite)
+                        if (!selectedPromo.isFavorite) onAddFavorite(selectedPromo.id)
+                    },
                     onGenerateQr = { redemptionViewModel.generate(selectedPromo) },
                 )
             }
