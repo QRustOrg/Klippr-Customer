@@ -14,4 +14,7 @@ interface RedemptionRepository {
     suspend fun getByConsumer(consumerId: String): List<RedemptionCode>
 
     suspend fun getById(id: String): RedemptionCode
+
+    /** US-06: marca un código como canjeado (endpoint de negocio /confirm). */
+    suspend fun confirm(code: RedemptionCode): RedemptionCode
 }

@@ -26,6 +26,7 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
             title = dto.promotionTitle,
             discountValue = dto.discountValue,
             discountType = dto.discountType?.toDiscountType(),
+            imageKey = null, // el backend no embebe imageKey en la redención
         )
         val summary = if (embedded.isComplete || promotionId.isBlank()) {
             embedded
@@ -36,6 +37,7 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
         return RedemptionCode(
             id = dto.id ?: dto.code.orEmpty(),
             promotionId = promotionId,
+            businessId = dto.businessId,
             code = dto.code.orEmpty(),
             token = dto.token.orEmpty(),
             status = resolveStatus(dto.status, expiresAt, redeemedAt),
@@ -46,6 +48,7 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
             promotionTitle = summary.title,
             discountValue = summary.discountValue,
             discountType = summary.discountType,
+            imageKey = summary.imageKey,
         )
     }
 
@@ -61,6 +64,7 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
             title = p.title,
             discountValue = p.discountAmount,
             discountType = p.discountType.toDiscountType(),
+            imageKey = p.imageKey,
         )
     } catch (e: Exception) {
         null
@@ -71,6 +75,7 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
         val title: String?,
         val discountValue: Double?,
         val discountType: DiscountType?,
+        val imageKey: String?,
     ) {
         val isComplete: Boolean get() = title != null && discountValue != null && discountType != null
     }

@@ -38,6 +38,7 @@ import com.example.klippr.promotions.domain.usecase.ToggleFavoriteUseCase
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.data.mapper.RedemptionMapper
 import com.example.klippr.redemption.data.repository.RedemptionRepositoryImpl
+import com.example.klippr.redemption.domain.usecase.ConfirmRedemptionUseCase
 import com.example.klippr.redemption.domain.usecase.GenerateRedemptionUseCase
 import com.example.klippr.redemption.domain.usecase.GetConsumerRedemptionsUseCase
 import com.example.klippr.redemption.domain.usecase.GetRedemptionByIdUseCase
@@ -113,6 +114,7 @@ class MainActivity : ComponentActivity() {
                     generateRedemption     = GenerateRedemptionUseCase(repository),
                     getConsumerRedemptions = GetConsumerRedemptionsUseCase(repository),
                     getRedemptionById      = GetRedemptionByIdUseCase(repository),
+                    confirmRedemption      = ConfirmRedemptionUseCase(repository),
                     getCurrentUser         = GetCurrentUserUseCase(authRepository),
                 ) as T
             }

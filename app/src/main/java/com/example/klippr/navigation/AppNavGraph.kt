@@ -28,6 +28,7 @@ import com.example.klippr.promotions.presentation.view.PromotionDetailScreen
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.presentation.view.MisPromosScreen
 import com.example.klippr.redemption.presentation.view.QrCodeScreen
+import com.example.klippr.redemption.presentation.view.RedemptionSuccessScreen
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.settings.presentation.view.SettingsScreen
 
@@ -94,7 +95,7 @@ fun AppNavGraph(
                 onNavigateToExplore   = { navController.navigate(Routes.EXPLORE) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
                 onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
-                onNavigateToQr        = { id -> navController.navigate(Routes.qrCode(id)) },
+                onNavigateToQr        = { id -> navController.navigate(Routes.redemptionSuccess(id)) },
             )
         }
 
@@ -157,7 +158,7 @@ fun AppNavGraph(
 
             LaunchedEffect(redemptionState.generated) {
                 redemptionState.generated?.let { code ->
-                    navController.navigate(Routes.qrCode(code.id))
+                    navController.navigate(Routes.redemptionSuccess(code.id))
                     redemptionViewModel.consumeGenerated()
                 }
             }
@@ -212,6 +213,33 @@ fun AppNavGraph(
                         )
                     }
                 },
+            )
+        }
+
+        composable(
+            route = Routes.REDEMPTION_SUCCESS,
+            arguments = listOf(navArgument(Routes.ARG_REDEMPTION_ID) { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val redemptionId    = backStackEntry.arguments?.getString(Routes.ARG_REDEMPTION_ID).orEmpty()
+            val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
+            val code            = redemptionState.codeById(redemptionId)
+
+            LaunchedEffect(redemptionId) {
+                redemptionViewModel.loadCodeById(redemptionId)
+            }
+
+            val goExplore: () -> Unit = {
+                navController.navigate(Routes.EXPLORE) { popUpTo(Routes.HOME) }
+            }
+            RedemptionSuccessScreen(
+                code         = code,
+                isLoading    = redemptionState.isLoadingCode && code == null,
+                errorMessage = redemptionState.codeError.takeIf { code == null },
+                onContinue   = goExplore,
+                onPromos     = goExplore,
+                onComunidad  = { navController.navigate(Routes.COMMUNITY) },
+                onInicio     = { navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } } },
+                onFavoritos  = { navController.navigate(Routes.MIS_PROMOS) },
             )
         }
 

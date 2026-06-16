@@ -13,6 +13,13 @@ data class RedeemPromotionRequestDto(
     @SerializedName("validationMethod")      val validationMethod: String = "QrScan",
 )
 
+/** Cuerpo de POST /api/redemptions/{id}/confirm (marca un canje como usado). */
+data class ConfirmRedemptionRequestDto(
+    @SerializedName("businessId")       val businessId: String,
+    @SerializedName("validationMethod") val validationMethod: String = "ManualCode",
+    @SerializedName("confirmedAt")      val confirmedAt: String,
+)
+
 /**
  * Respuesta de redención. El schema del backend no está documentado, por lo que todos los campos
  * son opcionales y se aceptan nombres alternativos donde es razonable. El mapper normaliza.

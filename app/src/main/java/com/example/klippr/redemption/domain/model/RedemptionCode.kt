@@ -12,6 +12,7 @@ import java.time.Instant
 data class RedemptionCode(
     val id: String,
     val promotionId: String,
+    val businessId: String?,
     val code: String,
     val token: String,
     val status: RedemptionStatus,
@@ -23,6 +24,7 @@ data class RedemptionCode(
     val promotionTitle: String?,
     val discountValue: Double?,
     val discountType: DiscountType?,
+    val imageKey: String?,
 ) {
     /** Contenido único que se codifica en el QR escaneable. */
     val qrContent: String get() = token.ifBlank { code }

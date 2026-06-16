@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
 import com.example.klippr.promotions.domain.model.Promotion
+import com.example.klippr.redemption.domain.model.RedemptionCode
+import com.example.klippr.redemption.domain.usecase.ConfirmRedemptionUseCase
 import com.example.klippr.redemption.domain.usecase.GenerateRedemptionUseCase
 import com.example.klippr.redemption.domain.usecase.GetConsumerRedemptionsUseCase
 import com.example.klippr.redemption.domain.usecase.GetRedemptionByIdUseCase
@@ -20,6 +22,7 @@ class RedemptionViewModel(
     private val generateRedemption: GenerateRedemptionUseCase,
     private val getConsumerRedemptions: GetConsumerRedemptionsUseCase,
     private val getRedemptionById: GetRedemptionByIdUseCase,
+    private val confirmRedemption: ConfirmRedemptionUseCase,
     private val getCurrentUser: GetCurrentUserUseCase,
 ) : ViewModel() {
 
@@ -66,6 +69,20 @@ class RedemptionViewModel(
                 }
             } catch (e: Exception) {
                 _state.update { it.copy(isGenerating = false, error = e.message ?: "Error al generar código") }
+            }
+        }
+    }
+
+    /** US-06: marca [code] como canjeado y recarga el historial al confirmar. */
+    fun markRedeemed(code: RedemptionCode) {
+        viewModelScope.launch {
+            _state.update { it.copy(isGenerating = true, error = null) }
+            try {
+                confirmRedemption(code)
+                _state.update { it.copy(isGenerating = false) }
+                loadHistory()
+            } catch (e: Exception) {
+                _state.update { it.copy(isGenerating = false, error = e.message ?: "Error al confirmar canje") }
             }
         }
     }

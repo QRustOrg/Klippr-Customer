@@ -1,5 +1,6 @@
 package com.example.klippr.redemption.data.remote.api
 
+import com.example.klippr.redemption.data.remote.dto.ConfirmRedemptionRequestDto
 import com.example.klippr.redemption.data.remote.dto.RedeemPromotionRequestDto
 import com.example.klippr.redemption.data.remote.dto.RedemptionDto
 import retrofit2.http.Body
@@ -13,6 +14,9 @@ interface RedemptionApiService {
 
     @POST("api/redemptions")
     suspend fun generate(@Body body: RedeemPromotionRequestDto): RedemptionDto
+
+    @POST("api/redemptions/{id}/confirm")
+    suspend fun confirm(@Path("id") id: String, @Body body: ConfirmRedemptionRequestDto): RedemptionDto
 
     @GET("api/redemptions/{id}")
     suspend fun getById(@Path("id") id: String): RedemptionDto
