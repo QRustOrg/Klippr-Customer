@@ -93,7 +93,7 @@ fun AppNavGraph(
                 onNavigateToExplore   = { navController.navigate(Routes.EXPLORE) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
                 onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
-                onPromotionClick      = { id -> navController.navigate(Routes.promotionDetail(id)) },
+                onNavigateToQr        = { id -> navController.navigate(Routes.qrCode(id)) },
             )
         }
 

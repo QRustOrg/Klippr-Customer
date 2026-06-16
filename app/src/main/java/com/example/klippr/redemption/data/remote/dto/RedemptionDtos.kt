@@ -10,7 +10,7 @@ data class RedeemPromotionRequestDto(
     @SerializedName("promotionId")           val promotionId: String,
     @SerializedName("expiresAt")             val expiresAt: String,
     @SerializedName("discountAppliedAmount") val discountAppliedAmount: Double,
-    @SerializedName("validationMethod")      val validationMethod: String = "QR",
+    @SerializedName("validationMethod")      val validationMethod: String = "QrScan",
 )
 
 /**

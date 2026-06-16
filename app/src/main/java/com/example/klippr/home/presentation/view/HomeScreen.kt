@@ -1,5 +1,6 @@
 package com.example.klippr.home.presentation.view
 
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,39 +34,46 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Settings
-import android.content.Intent
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.klippr.shared.presentation.component.KlipprBottomBar
-import com.example.klippr.shared.presentation.component.KlipprTab
-import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.view.rememberPromoDrawableId
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
+import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
+import com.example.klippr.shared.presentation.component.KlipprBottomBar
+import com.example.klippr.shared.presentation.component.KlipprTab
 import com.example.klippr.ui.theme.KlipprPurple
 
 // @author Samuel Bonifacio
@@ -78,10 +86,7 @@ private val TextGray = Color(0xFF888888)
 private val PromoImgPlaceholder = Color(0xFFE4DCFB)
 private val StarAmber = Color(0xFFFFC107)
 
-/**
- * Pantalla principal (Home/Inicio). Reúne saludo (perfil), cupones (redenciones),
- * estadísticas y accesos rápidos. La tuerca abre Settings; la campana es placeholder.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     profileViewModel: ProfileViewModel,
@@ -91,14 +96,13 @@ fun HomeScreen(
     onNavigateToExplore: () -> Unit,
     onNavigateToMisPromos: () -> Unit,
     onNavigateToCommunity: () -> Unit,
-    onPromotionClick: (String) -> Unit = {},
+    onNavigateToQr: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val profileState by profileViewModel.state.collectAsStateWithLifecycle()
     val promoState by promotionViewModel.listState.collectAsStateWithLifecycle()
     val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
 
-    // Recarga al entrar al Home (la sesión ya existe tras el login).
     LaunchedEffect(Unit) {
         profileViewModel.load()
         redemptionViewModel.loadHistory()
@@ -110,11 +114,21 @@ fun HomeScreen(
     val usedCoupons = redemptionState.redeemed.size
     val hasCoupons = redemptionState.active.isNotEmpty()
 
+    var selectedPromotion by remember { mutableStateOf<Promotion?>(null) }
+
+    LaunchedEffect(redemptionState.generated) {
+        redemptionState.generated?.let { code ->
+            selectedPromotion = null
+            onNavigateToQr(code.id)
+            redemptionViewModel.consumeGenerated()
+        }
+    }
+
     Scaffold(
         topBar = {
             HomeTopBar(
                 name = greeting,
-                onBell = { /* placeholder: sin backend de notificaciones aún */ },
+                onBell = {},
                 onSettings = onNavigateToSettings,
             )
         },
@@ -122,7 +136,7 @@ fun HomeScreen(
             KlipprBottomBar(
                 current = KlipprTab.INICIO,
                 onComunidad = onNavigateToCommunity,
-                onInicio = { },
+                onInicio = {},
                 onFavoritos = onNavigateToMisPromos,
                 onPromos = onNavigateToExplore,
             )
@@ -144,7 +158,6 @@ fun HomeScreen(
                 onExplore = onNavigateToExplore,
                 onSeeCoupons = onNavigateToMisPromos,
             )
-
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 StatCard(
@@ -164,12 +177,10 @@ fun HomeScreen(
                     iconTint = Color(0xFFD3503F),
                 )
             }
-
             Spacer(Modifier.height(24.dp))
             Text("Tiendas Populares Cerca", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = PurpleText)
             Spacer(Modifier.height(14.dp))
             StorePillsRow(onClick = onNavigateToExplore)
-
             Spacer(Modifier.height(24.dp))
             when {
                 promoState.isLoading && promoState.promotions.isEmpty() -> {
@@ -187,13 +198,12 @@ fun HomeScreen(
                     )
                 }
                 else -> {
-                    // Agrupa por categoría: cada una es una sección con título + carrusel horizontal.
                     val grouped = promoState.promotions.groupBy { it.category }
                     PromotionCategory.entries.filter { grouped.containsKey(it) }.forEach { category ->
                         PromoCategorySection(
                             title = category.label(),
                             promotions = grouped[category].orEmpty(),
-                            onPromotionClick = onPromotionClick,
+                            onPromotionClick = { promo -> selectedPromotion = promo },
                             onFavoriteClick = { id, fav -> promotionViewModel.toggleFavorite(id, fav) },
                             onSeeMore = onNavigateToExplore,
                         )
@@ -201,18 +211,29 @@ fun HomeScreen(
                     }
                 }
             }
-
             Spacer(Modifier.height(8.dp))
         }
     }
+
+    selectedPromotion?.let { promo ->
+        PromoApplyModal(
+            promotion = promo,
+            isLoading = redemptionState.isGenerating,
+            error = redemptionState.error,
+            onDismiss = {
+                selectedPromotion = null
+                redemptionViewModel.consumeError()
+            },
+            onApply = { redemptionViewModel.generate(promo) },
+        )
+    }
 }
 
-// Sección por categoría: título con chevron + carrusel horizontal de cards verticales (estilo Airbnb).
 @Composable
 private fun PromoCategorySection(
     title: String,
     promotions: List<Promotion>,
-    onPromotionClick: (String) -> Unit,
+    onPromotionClick: (Promotion) -> Unit,
     onFavoriteClick: (String, Boolean) -> Unit,
     onSeeMore: () -> Unit,
 ) {
@@ -237,7 +258,7 @@ private fun PromoCategorySection(
         items(promotions, key = { it.id }) { promo ->
             PromoCardVertical(
                 promotion = promo,
-                onClick = { onPromotionClick(promo.id) },
+                onClick = { onPromotionClick(promo) },
                 onFavoriteClick = { onFavoriteClick(promo.id, !promo.isFavorite) },
                 onShareClick = {
                     val send = Intent(Intent.ACTION_SEND).apply {
@@ -251,8 +272,6 @@ private fun PromoCategorySection(
     }
 }
 
-// Card vertical estilo Airbnb: imagen grande arriba, corazón de favorito overlay,
-// título y subtítulo "descuento · ★rating" debajo.
 @Composable
 private fun PromoCardVertical(
     promotion: Promotion,
@@ -281,7 +300,6 @@ private fun PromoCardVertical(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            // Botón favorito (TopEnd)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -299,7 +317,6 @@ private fun PromoCardVertical(
                     modifier = Modifier.size(20.dp),
                 )
             }
-            // US-24: botón compartir (TopStart)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -319,7 +336,6 @@ private fun PromoCardVertical(
             }
         }
         Spacer(Modifier.height(8.dp))
-        // Nombre del negocio (visible cuando el backend lo provee; hoy llega null).
         promotion.businessName?.takeIf { it.isNotBlank() }?.let { name ->
             Text(
                 text = name,
@@ -351,7 +367,83 @@ private fun PromoCardVertical(
     }
 }
 
-// Etiqueta de descuento: pill relleno con primary, borde primary y texto blanco para contraste.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PromoApplyModal(
+    promotion: Promotion,
+    isLoading: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onApply: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+        ) {
+            val resId = rememberPromoDrawableId(promotion.imageKey)
+            if (resId != 0) {
+                Image(
+                    painter = painterResource(resId),
+                    contentDescription = promotion.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+            Text(
+                text = promotion.title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = TextDark,
+            )
+            Spacer(Modifier.height(8.dp))
+            DiscountBadge(promotion.discountLabel())
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = promotion.description,
+                fontSize = 14.sp,
+                color = TextGray,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (error != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(text = error, color = Color.Red, fontSize = 13.sp)
+            }
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = onApply,
+                enabled = !isLoading,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = KlipprPurple),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.5.dp,
+                    )
+                } else {
+                    Text("Aplicar Descuento", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun DiscountBadge(label: String) {
     Box(
@@ -366,13 +458,11 @@ private fun DiscountBadge(label: String) {
     }
 }
 
-// Etiqueta de descuento para el subtítulo de la card.
 private fun Promotion.discountLabel(): String = when (discountType) {
     DiscountType.PERCENTAGE -> "${discountValue.toInt()}% OFF"
     DiscountType.FIXED_AMOUNT -> "S/ ${discountValue.toInt()} OFF"
 }
 
-// Nombre visible de la categoría para el título de cada sección.
 private fun PromotionCategory.label(): String = when (this) {
     PromotionCategory.FOOD -> "Comida"
     PromotionCategory.BEAUTY -> "Belleza"
@@ -532,4 +622,3 @@ private fun StorePillsRow(onClick: () -> Unit) {
         }
     }
 }
-

@@ -21,7 +21,7 @@ class RedemptionRepositoryImpl(
             promotionId = promotion.id,
             expiresAt = promotion.endDate.toString(),
             discountAppliedAmount = promotion.discountValue,
-            validationMethod = "QR",
+            validationMethod = "QrScan",
         )
         val dto = api.generate(request)
         // Asegura resumen de promo en la tarjeta aunque la respuesta venga mínima.

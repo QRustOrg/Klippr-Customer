@@ -37,5 +37,5 @@ class NetworkModule(sessionStore: SessionDataStore) {
     val profileApi: ProfileApiService     = retrofit.create(ProfileApiService::class.java)
     val promotionApi: PromotionApiService = retrofit.create(PromotionApiService::class.java)
     val redemptionApi: RedemptionApiService = retrofit.create(RedemptionApiService::class.java)
-    val reviewApi: ReviewApiService       = retrofit.create(ReviewApiService::class.java)  // ← AGREGAR
+    val reviewApi: ReviewApiService       = retrofit.create(ReviewApiService::class.java)
 }
