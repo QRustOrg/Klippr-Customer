@@ -13,7 +13,6 @@ object Routes {
     const val SETTINGS = "settings"
     const val PROFILE = "profile"
     const val EXPLORE = "explore"
-    const val CREATE_PROMOTION = "create_promotion"
     const val MIS_PROMOS = "mis_promos"
 
     const val COMMUNITY = "community"

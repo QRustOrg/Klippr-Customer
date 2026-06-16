@@ -12,6 +12,7 @@ import com.example.klippr.community.data.repository.ReviewRepositoryImpl
 import com.example.klippr.community.domain.usecase.CanUserReviewUseCase
 import com.example.klippr.community.domain.usecase.GetAllReviewsUseCase
 import com.example.klippr.community.domain.usecase.PostReviewUseCase
+import com.example.klippr.community.domain.usecase.ToggleLikeUseCase
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
 import com.example.klippr.core.database.KlipprDatabase
 import com.example.klippr.core.datastore.SessionDataStore
@@ -123,6 +124,7 @@ class MainActivity : ComponentActivity() {
             getAllReviewsUseCase  = GetAllReviewsUseCase(reviewRepository),
             postReviewUseCase    = PostReviewUseCase(reviewRepository),
             canUserReviewUseCase = CanUserReviewUseCase(reviewRepository),
+            toggleLikeUseCase    = ToggleLikeUseCase(reviewRepository),
         )
     }
 

@@ -16,7 +16,9 @@ fun ReviewDto.toEntity() = ReviewEntity(
     rating = rating,
     comment = comment,
     createdAt = createdAt,
-    isVerifiedPurchase = isVerifiedPurchase
+    isVerifiedPurchase = isVerifiedPurchase,
+    likeCount = likeCount,
+    isLikedByCurrentUser = false,
 )
 
 // Entity → Domain
@@ -32,7 +34,9 @@ fun ReviewEntity.toDomain() = Review(
     rating = rating,
     comment = comment,
     createdAt = createdAt,
-    isVerifiedPurchase = isVerifiedPurchase
+    isVerifiedPurchase = isVerifiedPurchase,
+    likeCount = likeCount,
+    isLikedByCurrentUser = isLikedByCurrentUser,
 )
 
 // DTO → Domain (directo, sin cache)
@@ -48,5 +52,7 @@ fun ReviewDto.toDomain() = Review(
     rating = rating,
     comment = comment,
     createdAt = createdAt,
-    isVerifiedPurchase = isVerifiedPurchase
+    isVerifiedPurchase = isVerifiedPurchase,
+    likeCount = likeCount,
+    isLikedByCurrentUser = false,
 )

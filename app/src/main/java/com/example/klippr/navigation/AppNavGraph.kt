@@ -22,7 +22,6 @@ import com.example.klippr.iam.presentation.view.SignUpScreen
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.profile.presentation.view.ProfileScreen
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
-import com.example.klippr.promotions.presentation.view.CreatePromotionScreen
 import com.example.klippr.promotions.presentation.view.ExploreScreen
 import com.example.klippr.promotions.presentation.view.PromotionDetailScreen
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
@@ -93,7 +92,6 @@ fun AppNavGraph(
                 onNavigateToSettings  = { navController.navigate(Routes.SETTINGS) },
                 onNavigateToExplore   = { navController.navigate(Routes.EXPLORE) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
-                onNavigateToCreate    = { navController.navigate(Routes.CREATE_PROMOTION) },
                 onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
                 onPromotionClick      = { id -> navController.navigate(Routes.promotionDetail(id)) },
             )
@@ -144,19 +142,8 @@ fun AppNavGraph(
                 onNavigateToHome    = {
                     navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } }
                 },
-                onNavigateToCreate    = { navController.navigate(Routes.CREATE_PROMOTION) },
+                onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
-            )
-        }
-
-        composable(Routes.CREATE_PROMOTION) {
-            CreatePromotionScreen(
-                onBack           = { navController.popBackStack() },
-                onNavigateToHome = {
-                    navController.navigate(Routes.EXPLORE) {
-                        popUpTo(Routes.EXPLORE) { inclusive = true }
-                    }
-                },
             )
         }
 
@@ -209,8 +196,12 @@ fun AppNavGraph(
         }
 
         composable(Routes.MIS_PROMOS) {
+            val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
+            val currentUserId = session?.user?.userId ?: ""
             MisPromosScreen(
                 viewModel           = redemptionViewModel,
+                communityViewModel  = communityViewModel,
+                currentUserId       = currentUserId,
                 onCodeClick         = { id -> navController.navigate(Routes.qrCode(id)) },
                 onNavigateCommunity = { navController.navigate(Routes.COMMUNITY) },
                 onNavigateHome      = {

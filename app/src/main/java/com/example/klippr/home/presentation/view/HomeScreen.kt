@@ -33,7 +33,10 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Settings
+import android.content.Intent
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -90,7 +93,6 @@ fun HomeScreen(
     onNavigateToCommunity: () -> Unit,
     onPromotionClick: (String) -> Unit = {},
     modifier: Modifier = Modifier,
-    onNavigateToCreate: () -> Unit,
 ) {
     val profileState by profileViewModel.state.collectAsStateWithLifecycle()
     val promoState by promotionViewModel.listState.collectAsStateWithLifecycle()
@@ -214,6 +216,7 @@ private fun PromoCategorySection(
     onFavoriteClick: (String, Boolean) -> Unit,
     onSeeMore: () -> Unit,
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -236,6 +239,13 @@ private fun PromoCategorySection(
                 promotion = promo,
                 onClick = { onPromotionClick(promo.id) },
                 onFavoriteClick = { onFavoriteClick(promo.id, !promo.isFavorite) },
+                onShareClick = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, "${promo.title}\n${promo.description}")
+                    }
+                    context.startActivity(Intent.createChooser(send, "Compartir"))
+                },
             )
         }
     }
@@ -248,6 +258,7 @@ private fun PromoCardVertical(
     promotion: Promotion,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    onShareClick: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -270,6 +281,7 @@ private fun PromoCardVertical(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+            // Botón favorito (TopEnd)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -285,6 +297,24 @@ private fun PromoCardVertical(
                     contentDescription = if (promotion.isFavorite) "Quitar favorito" else "Agregar favorito",
                     tint = Color.White,
                     modifier = Modifier.size(20.dp),
+                )
+            }
+            // US-24: botón compartir (TopStart)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(10.dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.28f))
+                    .clickable(onClick = onShareClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Compartir",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp),
                 )
             }
         }

@@ -19,6 +19,9 @@ interface ReviewDao {
     @Query("SELECT * FROM reviews WHERE userId = :userId ORDER BY createdAt DESC")
     fun getByUser(userId: String): Flow<List<ReviewEntity>>
 
+    @Query("SELECT * FROM reviews WHERE id = :id")
+    suspend fun getById(id: String): ReviewEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(reviews: List<ReviewEntity>)
 
@@ -27,4 +30,7 @@ interface ReviewDao {
 
     @Query("DELETE FROM reviews")
     suspend fun deleteAll()
+
+    @Query("UPDATE reviews SET likeCount = :count, isLikedByCurrentUser = :liked WHERE id = :id")
+    suspend fun updateLike(id: String, count: Int, liked: Boolean)
 }

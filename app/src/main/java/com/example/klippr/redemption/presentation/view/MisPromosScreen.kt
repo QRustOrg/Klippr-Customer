@@ -34,9 +34,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -47,6 +49,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.klippr.community.presentation.view.ReviewBottomSheet
+import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
 import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.domain.model.RedemptionStatus
@@ -61,11 +65,12 @@ import com.example.klippr.ui.theme.KlipprPurple
 private val TextSecondary = Color(0xFF888888)
 private val TextPrimary = Color(0xFF1A1A1A)
 
-/** Mis Promos: codigos activos, historial usado y expirados en secciones verticales. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MisPromosScreen(
     viewModel: RedemptionViewModel,
+    communityViewModel: CommunityViewModel,
+    currentUserId: String,
     onCodeClick: (String) -> Unit = {},
     onNavigateCommunity: () -> Unit = {},
     onNavigateHome: () -> Unit = {},
@@ -73,8 +78,20 @@ fun MisPromosScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val communityUiState by communityViewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.loadHistory() }
+
+    // US-13: ReviewBottomSheet como modal sobre MisPromos
+    if (communityUiState.isReviewSheetOpen) {
+        ReviewBottomSheet(
+            uiState = communityUiState,
+            onDismiss = { communityViewModel.closeReviewSheet() },
+            onRatingChanged = communityViewModel::onRatingChanged,
+            onCommentChanged = communityViewModel::onCommentChanged,
+            onSubmit = communityViewModel::submitReview
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -114,18 +131,26 @@ fun MisPromosScreen(
                     emptyText = "No tienes códigos activos",
                     codes = state.active,
                     onCodeClick = onCodeClick,
+                    onLeaveReview = null,
                 )
                 redemptionSection(
                     title = "Historial usado",
                     emptyText = "Aún no tienes descuentos usados",
                     codes = state.redeemed,
                     onCodeClick = onCodeClick,
+                    onLeaveReview = { code ->
+                        communityViewModel.openReviewSheetForRedeemed(
+                            code.promotionId,
+                            code.promotionTitle ?: "Promoción"
+                        )
+                    },
                 )
                 redemptionSection(
                     title = "Expirados",
                     emptyText = "No tienes códigos expirados",
                     codes = state.expired,
                     onCodeClick = onCodeClick,
+                    onLeaveReview = null,
                 )
             }
         }
@@ -137,6 +162,7 @@ private fun LazyListScope.redemptionSection(
     emptyText: String,
     codes: List<RedemptionCode>,
     onCodeClick: (String) -> Unit,
+    onLeaveReview: ((RedemptionCode) -> Unit)?,
 ) {
     item(key = "${title}_header") {
         SectionHeader(title = title, count = codes.size)
@@ -147,7 +173,11 @@ private fun LazyListScope.redemptionSection(
         }
     } else {
         items(codes, key = { "${title}_${it.id}" }) { code ->
-            RedemptionCard(code = code, onClick = { onCodeClick(code.id) })
+            RedemptionCard(
+                code = code,
+                onClick = { onCodeClick(code.id) },
+                onLeaveReview = onLeaveReview?.let { cb -> { cb(code) } },
+            )
         }
     }
 }
@@ -177,63 +207,83 @@ private fun EmptySectionMessage(text: String) {
 }
 
 @Composable
-private fun RedemptionCard(code: RedemptionCode, onClick: () -> Unit) {
-    Row(
+private fun RedemptionCard(
+    code: RedemptionCode,
+    onClick: () -> Unit,
+    onLeaveReview: (() -> Unit)?,
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
             .clickable(onClick = onClick)
             .padding(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .size(140.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(Color.White),
-            contentAlignment = Alignment.Center,
-        ) {
-            val qr = remember(code.qrContent) { generateQrBitmap(code.qrContent, 220) }
-            if (qr != null) {
-                Image(bitmap = qr, contentDescription = "Código QR", modifier = Modifier.size(104.dp))
-            } else {
-                Icon(Icons.Default.QrCode2, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(96.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(140.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.White),
+                contentAlignment = Alignment.Center,
+            ) {
+                val qr = remember(code.qrContent) { generateQrBitmap(code.qrContent, 220) }
+                if (qr != null) {
+                    Image(bitmap = qr, contentDescription = "Código QR", modifier = Modifier.size(104.dp))
+                } else {
+                    Icon(Icons.Default.QrCode2, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(96.dp))
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = code.businessName ?: code.promotionTitle ?: "Promoción",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        color = TextPrimary,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    StatusPill(code.status)
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = code.promotionTitle ?: code.discountLabel(),
+                    fontSize = 16.sp,
+                    color = TextPrimary,
+                )
+
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = code.dateLabel(),
+                    fontSize = 13.sp,
+                    color = TextSecondary,
+                )
             }
         }
 
-        Spacer(Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+        // US-13: botón "Dejar reseña" solo en canjes usados
+        if (onLeaveReview != null) {
+            TextButton(
+                onClick = onLeaveReview,
+                modifier = Modifier.align(Alignment.End),
             ) {
                 Text(
-                    text = code.businessName ?: code.promotionTitle ?: "Promoción",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f, fill = false),
+                    text = "Dejar reseña",
+                    color = KlipprPurple,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
                 )
-                Spacer(Modifier.width(8.dp))
-                StatusPill(code.status)
             }
-
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = code.promotionTitle ?: code.discountLabel(),
-                fontSize = 16.sp,
-                color = TextPrimary,
-            )
-
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = code.dateLabel(),
-                fontSize = 13.sp,
-                color = TextSecondary,
-            )
         }
     }
 }

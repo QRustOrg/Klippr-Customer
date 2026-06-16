@@ -16,10 +16,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import android.content.Intent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,6 +67,7 @@ fun PromotionDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.detailState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(promotionId) { viewModel.loadDetail(promotionId) }
 
@@ -78,6 +82,15 @@ fun PromotionDetailScreen(
                 },
                 actions = {
                     state.promotion?.let { promo ->
+                        IconButton(onClick = {
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, "${promo.title}\n${promo.description}")
+                            }
+                            context.startActivity(Intent.createChooser(send, "Compartir"))
+                        }) {
+                            Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = Color.White)
+                        }
                         IconButton(onClick = { viewModel.toggleFavorite(promo.id, !promo.isFavorite) }) {
                             Icon(
                                 imageVector = if (promo.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,

@@ -54,6 +54,22 @@ class ReviewRepositoryImpl(
         Result.success(mockReview.toDomain())
     }
 
+    override suspend fun toggleLike(reviewId: String): Result<Review> = try {
+        val dto = api.toggleLike(reviewId)
+        dao.insert(dto.toEntity())
+        Result.success(dto.toDomain())
+    } catch (e: Exception) {
+        val current = dao.getById(reviewId)
+        if (current != null) {
+            val nowLiked = !current.isLikedByCurrentUser
+            val newCount = if (nowLiked) current.likeCount + 1 else maxOf(0, current.likeCount - 1)
+            dao.updateLike(reviewId, newCount, nowLiked)
+            Result.success(current.copy(likeCount = newCount, isLikedByCurrentUser = nowLiked).toDomain())
+        } else {
+            Result.failure(Exception("Reseña no encontrada"))
+        }
+    }
+
     override suspend fun canUserReview(promotionId: String, userId: String): Boolean = try {
         api.canUserReview(promotionId, userId)
     } catch (e: Exception) {

@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.outlined.RateReview
@@ -32,8 +34,8 @@ import java.util.*
 private val StarYellow      = Color(0xFFFFC107)
 private val KlipprGreen     = Color(0xFF4CAF50)
 private val KlipprLavender  = Color(0xFFF3EEFF)
+private val LikePink        = Color(0xFFE91E63)
 
-// ─── Pantalla principal ───────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityScreen(
@@ -74,7 +76,7 @@ fun CommunityScreen(
         bottomBar = {
             KlipprBottomBar(
                 current = KlipprTab.COMUNIDAD,
-                onComunidad = { /* ya estamos aquí */ },
+                onComunidad = { },
                 onInicio = onNavigateHome,
                 onFavoritos = onNavigateMisPromos,
                 onPromos = onNavigatePromos,
@@ -101,13 +103,7 @@ fun CommunityScreen(
                 else -> {
                     ReviewFeed(
                         reviews = uiState.reviews,
-                        onReviewTap = { review ->
-                            viewModel.openReviewSheet(
-                                review.promotionId,
-                                review.promotionTitle,
-                                currentUserId
-                            )
-                        }
+                        onLike = { reviewId -> viewModel.toggleLike(reviewId) },
                     )
                 }
             }
@@ -132,7 +128,7 @@ fun CommunityScreen(
 @Composable
 private fun ReviewFeed(
     reviews: List<Review>,
-    onReviewTap: (Review) -> Unit
+    onLike: (String) -> Unit,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -148,18 +144,19 @@ private fun ReviewFeed(
             )
         }
         items(reviews, key = { it.id }) { review ->
-            ReviewCard(review = review, onTap = { onReviewTap(review) })
+            ReviewCard(
+                review = review,
+                onLike = { onLike(review.id) },
+            )
         }
         item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
 
 // ─── Card de reseña ──────────────────────────────────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ReviewCard(review: Review, onTap: () -> Unit) {
+private fun ReviewCard(review: Review, onLike: () -> Unit) {
     Card(
-        onClick = onTap,
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -167,7 +164,6 @@ private fun ReviewCard(review: Review, onTap: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // Placeholder de imagen (sin AsyncImage por ahora)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -239,6 +235,30 @@ private fun ReviewCard(review: Review, onTap: () -> Unit) {
                 color = Color(0xFF333333),
                 lineHeight = 20.sp
             )
+
+            // US-16: reacción / like
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onLike, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = if (review.isLikedByCurrentUser) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = "Me gusta",
+                        tint = if (review.isLikedByCurrentUser) LikePink else Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                if (review.likeCount > 0) {
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = review.likeCount.toString(),
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                    )
+                }
+            }
         }
     }
 }
@@ -307,7 +327,7 @@ private fun EmptyFeedPlaceholder(modifier: Modifier = Modifier) {
             color = KlipprPurple
         )
         Text(
-            text = "Sé el primero en compartir tu experiencia con una promoción",
+            text = "¡Canjea una promoción y comparte tu experiencia! Ve a Mis Promos para dejar tu primera reseña.",
             fontSize = 14.sp,
             color = Color.Gray,
             textAlign = TextAlign.Center,

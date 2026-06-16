@@ -16,7 +16,7 @@ import com.example.klippr.promotions.data.local.entity.PromotionEntity
         PromotionEntity::class,
         ReviewEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(InstantConverter::class)

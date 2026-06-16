@@ -31,4 +31,7 @@ interface ReviewApiService {
         @Query("promotionId") promotionId: String,
         @Query("userId") userId: String
     ): Boolean
+
+    @POST("api/reviews/{id}/like")
+    suspend fun toggleLike(@Path("id") reviewId: String): ReviewDto
 }

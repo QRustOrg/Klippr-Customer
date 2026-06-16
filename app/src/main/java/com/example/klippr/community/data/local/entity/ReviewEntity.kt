@@ -16,5 +16,7 @@ data class ReviewEntity(
     val rating: Int,
     val comment: String,
     val createdAt: Long,
-    val isVerifiedPurchase: Boolean
+    val isVerifiedPurchase: Boolean,
+    val likeCount: Int = 0,
+    val isLikedByCurrentUser: Boolean = false,
 )

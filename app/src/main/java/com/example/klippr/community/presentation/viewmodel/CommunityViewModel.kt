@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.klippr.community.domain.usecase.CanUserReviewUseCase
 import com.example.klippr.community.domain.usecase.GetAllReviewsUseCase
 import com.example.klippr.community.domain.usecase.PostReviewUseCase
+import com.example.klippr.community.domain.usecase.ToggleLikeUseCase
 import com.example.klippr.community.presentation.state.CommunityUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +18,8 @@ import kotlinx.coroutines.launch
 class CommunityViewModel(
     private val getAllReviewsUseCase: GetAllReviewsUseCase,
     private val postReviewUseCase: PostReviewUseCase,
-    private val canUserReviewUseCase: CanUserReviewUseCase
+    private val canUserReviewUseCase: CanUserReviewUseCase,
+    private val toggleLikeUseCase: ToggleLikeUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityUiState())
@@ -40,6 +42,7 @@ class CommunityViewModel(
         }
     }
 
+    // Abre el sheet verificando con el API si el usuario puede reseñar (desde CommunityScreen)
     fun openReviewSheet(promotionId: String, promotionTitle: String, currentUserId: String) {
         viewModelScope.launch {
             val canReview = canUserReviewUseCase(promotionId, currentUserId)
@@ -54,6 +57,21 @@ class CommunityViewModel(
                     submitSuccess = false
                 )
             }
+        }
+    }
+
+    // Abre el sheet desde MisPromos: el canje ya confirma que el usuario puede reseñar
+    fun openReviewSheetForRedeemed(promotionId: String, promotionTitle: String) {
+        _uiState.update {
+            it.copy(
+                isReviewSheetOpen = true,
+                selectedPromotionId = promotionId,
+                selectedPromotionTitle = promotionTitle,
+                canCurrentUserReview = true,
+                draftRating = 0,
+                draftComment = "",
+                submitSuccess = false
+            )
         }
     }
 
@@ -89,18 +107,32 @@ class CommunityViewModel(
         }
     }
 
+    // US-16: toggle like en una reseña; Room emite el nuevo estado automáticamente
+    fun toggleLike(reviewId: String) {
+        viewModelScope.launch {
+            toggleLikeUseCase(reviewId).onFailure { e ->
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+        }
+    }
+
     fun dismissError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
 
-    // Factory para instanciar con dependencias
     class Factory(
         private val getAllReviewsUseCase: GetAllReviewsUseCase,
         private val postReviewUseCase: PostReviewUseCase,
-        private val canUserReviewUseCase: CanUserReviewUseCase
+        private val canUserReviewUseCase: CanUserReviewUseCase,
+        private val toggleLikeUseCase: ToggleLikeUseCase,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            CommunityViewModel(getAllReviewsUseCase, postReviewUseCase, canUserReviewUseCase) as T
+            CommunityViewModel(
+                getAllReviewsUseCase,
+                postReviewUseCase,
+                canUserReviewUseCase,
+                toggleLikeUseCase,
+            ) as T
     }
 }

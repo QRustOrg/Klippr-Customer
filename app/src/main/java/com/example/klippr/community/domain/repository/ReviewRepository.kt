@@ -19,5 +19,7 @@ interface ReviewRepository {
 
     suspend fun canUserReview(promotionId: String, userId: String): Boolean
 
+    suspend fun toggleLike(reviewId: String): Result<Review>
+
     suspend fun refreshAll()
 }

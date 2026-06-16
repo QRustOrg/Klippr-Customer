@@ -137,7 +137,7 @@ fun ExploreScreen(
     onBack: () -> Unit,
     onNavigateToQr: (String) -> Unit,
     onNavigateToHome: () -> Unit = {},
-    onNavigateToCreate: () -> Unit = {},
+    onNavigateToCommunity: () -> Unit = {},
     onNavigateToMisPromos: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -210,7 +210,7 @@ fun ExploreScreen(
         bottomBar = {
             ExploreBottomBar(
                 onNavigateToHome = onNavigateToHome,
-                onNavigateToCreate = onNavigateToCreate,
+                onNavigateToCommunity = onNavigateToCommunity,
                 onNavigateToMisPromos = onNavigateToMisPromos,
             )
         },
@@ -930,14 +930,13 @@ private fun ExplorePromoCard(promotion: Promotion, onClick: () -> Unit) {
 @Composable
 private fun ExploreBottomBar(
     onNavigateToHome: () -> Unit = {},
-    onNavigateToCreate: () -> Unit = {},
+    onNavigateToCommunity: () -> Unit = {},
     onNavigateToMisPromos: () -> Unit = {},
 ) {
     val inactive = TextSecondary
     NavigationBar(containerColor = Color.White, tonalElevation = 4.dp) {
-        // "Comunidad" actúa como entry point temporal a CreatePromotion hasta implementar su pantalla propia.
         NavigationBarItem(
-            selected = false, onClick = onNavigateToCreate,
+            selected = false, onClick = onNavigateToCommunity,
             icon = { Icon(Icons.Default.Group, contentDescription = "Comunidad") },
             label = { Text("Comunidad", fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
