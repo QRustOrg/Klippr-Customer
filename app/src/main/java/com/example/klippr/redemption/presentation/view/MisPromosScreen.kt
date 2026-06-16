@@ -21,21 +21,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -61,8 +68,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.community.presentation.view.ReviewBottomSheet
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
+import com.example.klippr.favorites.domain.model.Favorite
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.promotions.domain.model.DiscountType
+import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.presentation.view.rememberPromoDrawableId
+import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.domain.model.RedemptionStatus
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
@@ -92,8 +103,11 @@ private enum class OrdenMonto(val label: String) { NINGUNO("Sin orden"), MAYOR("
 fun MisPromosScreen(
     viewModel: RedemptionViewModel,
     communityViewModel: CommunityViewModel,
+    favoriteViewModel: FavoriteViewModel,
+    promotionViewModel: PromotionViewModel,
     currentUserId: String,
     onCodeClick: (String) -> Unit = {},
+    onNavigateToDetail: (String) -> Unit = {},
     onNavigateCommunity: () -> Unit = {},
     onNavigateHome: () -> Unit = {},
     onNavigatePromos: () -> Unit = {},
@@ -101,9 +115,14 @@ fun MisPromosScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val communityUiState by communityViewModel.uiState.collectAsState()
+    val favoriteState by favoriteViewModel.state.collectAsStateWithLifecycle()
+    val promotionListState by promotionViewModel.listState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { viewModel.loadHistory() }
+    LaunchedEffect(currentUserId) { favoriteViewModel.loadFavorites(currentUserId) }
 
+    // 0 = Favoritos (tab por defecto), 1 = Mis Promos (activos/canjeados/expirados)
+    var outerTab by remember { mutableIntStateOf(0) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
     // US-13: ReviewBottomSheet como modal sobre MisPromos
@@ -120,7 +139,12 @@ fun MisPromosScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Mis Promos", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 24.sp) },
+                title = {
+                    Text(
+                        if (outerTab == 0) "Favoritos" else "Mis Promos",
+                        fontWeight = FontWeight.Bold, color = Color.White, fontSize = 24.sp,
+                    )
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = KlipprPurple),
             )
         },
@@ -135,50 +159,173 @@ fun MisPromosScreen(
         modifier = modifier,
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            PromosTabRow(
-                selected = selectedTab,
-                counts = intArrayOf(state.active.size, state.redeemed.size, state.expired.size),
-                onSelect = { selectedTab = it },
-            )
+            TabRow(selectedTabIndex = outerTab, containerColor = Color.White, contentColor = KlipprPurple) {
+                Tab(selected = outerTab == 0, onClick = { outerTab = 0 }, text = { Text("Favoritos") })
+                Tab(selected = outerTab == 1, onClick = { outerTab = 1 }, text = { Text("Mis Promos") })
+            }
 
-            when {
-                state.isLoading -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator(color = KlipprPurple) }
+            if (outerTab == 0) {
+                FavoritesTabContent(
+                    favorites = favoriteState.visibleFavorites,
+                    isLoading = favoriteState.isLoading,
+                    promotions = promotionListState.promotions,
+                    onVerDetalles = onNavigateToDetail,
+                    onEliminar = { fav ->
+                        favoriteViewModel.deleteFavorite(fav.favoriteId, currentUserId)
+                        promotionViewModel.toggleFavorite(fav.promotionId, false)
+                    },
+                    onArchivar = { fav -> favoriteViewModel.archiveFavorite(fav.favoriteId) },
+                )
+            } else {
+                PromosTabRow(
+                    selected = selectedTab,
+                    counts = intArrayOf(state.active.size, state.redeemed.size, state.expired.size),
+                    onSelect = { selectedTab = it },
+                )
 
-                state.error != null -> Box(
-                    Modifier.fillMaxSize().padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) { Text(state.error!!, color = TextSecondary) }
+                when {
+                    state.isLoading -> Box(
+                        Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) { CircularProgressIndicator(color = KlipprPurple) }
 
-                else -> when (selectedTab) {
-                    0 -> QrCardsList(
-                        codes = state.active,
-                        emptyText = "No tienes códigos activos",
-                        onCodeClick = onCodeClick,
-                        onMarkRedeemed = { code -> viewModel.markRedeemed(code) },
-                        isBusy = state.isGenerating,
-                    )
-                    1 -> HistorialList(
-                        codes = state.redeemed,
-                        onCodeClick = onCodeClick,
-                        onLeaveReview = { code ->
-                            communityViewModel.openReviewSheetForRedeemed(
-                                code.promotionId,
-                                code.promotionTitle ?: "Promoción",
-                            )
-                        },
-                    )
-                    else -> QrCardsList(
-                        codes = state.expired,
-                        emptyText = "No tienes códigos expirados",
-                        onCodeClick = onCodeClick,
-                        onMarkRedeemed = null,
-                        isBusy = false,
-                    )
+                    state.error != null -> Box(
+                        Modifier.fillMaxSize().padding(32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Text(state.error!!, color = TextSecondary) }
+
+                    else -> when (selectedTab) {
+                        0 -> QrCardsList(
+                            codes = state.active,
+                            emptyText = "No tienes códigos activos",
+                            onCodeClick = onCodeClick,
+                            onMarkRedeemed = { code -> viewModel.markRedeemed(code) },
+                            isBusy = state.isGenerating,
+                        )
+                        1 -> HistorialList(
+                            codes = state.redeemed,
+                            onCodeClick = onCodeClick,
+                            onLeaveReview = { code ->
+                                communityViewModel.openReviewSheetForRedeemed(
+                                    code.promotionId,
+                                    code.promotionTitle ?: "Promoción",
+                                )
+                            },
+                        )
+                        else -> QrCardsList(
+                            codes = state.expired,
+                            emptyText = "No tienes códigos expirados",
+                            onCodeClick = onCodeClick,
+                            onMarkRedeemed = null,
+                            isBusy = false,
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+// ---------- Favoritos: carta con bookmark + menú 3 puntos (Eliminar/Archivar) ----------
+
+@Composable
+private fun FavoritesTabContent(
+    favorites: List<Favorite>,
+    isLoading: Boolean,
+    promotions: List<Promotion>,
+    onVerDetalles: (String) -> Unit,
+    onEliminar: (Favorite) -> Unit,
+    onArchivar: (Favorite) -> Unit,
+) {
+    when {
+        isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = KlipprPurple)
+        }
+        favorites.isEmpty() -> EmptyMessage("Aún no tienes favoritos. Marca una promo con el corazón para verla aquí.")
+        else -> LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            items(favorites, key = { it.favoriteId }) { fav ->
+                val promo = promotions.find { it.id == fav.promotionId }
+                FavoriteCard(
+                    favorite = fav,
+                    promotion = promo,
+                    onVerDetalles = { onVerDetalles(fav.promotionId) },
+                    onEliminar = { onEliminar(fav) },
+                    onArchivar = { onArchivar(fav) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FavoriteCard(
+    favorite: Favorite,
+    promotion: Promotion?,
+    onVerDetalles: () -> Unit,
+    onEliminar: () -> Unit,
+    onArchivar: () -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .padding(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(96.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFE4DCFB)),
+                contentAlignment = Alignment.Center,
+            ) {
+                val resId = rememberPromoDrawableId(promotion?.imageKey)
+                if (resId != 0) {
+                    Image(
+                        painter = painterResource(resId),
+                        contentDescription = promotion?.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(Icons.Default.Bookmark, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(40.dp))
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = promotion?.businessName ?: "Promoción",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = promotion?.title ?: "",
+                    fontSize = 14.sp,
+                    color = TextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(Icons.Default.Bookmark, contentDescription = "Guardado", tint = KlipprPurple, modifier = Modifier.size(22.dp))
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Más opciones", tint = TextSecondary)
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(text = { Text("Eliminar") }, onClick = { menuOpen = false; onEliminar() })
+                    DropdownMenuItem(text = { Text("Archivar") }, onClick = { menuOpen = false; onArchivar() })
+                }
+            }
+        }
+        TextButton(onClick = onVerDetalles, modifier = Modifier.align(Alignment.End)) {
+            Text("Ver más detalles", color = KlipprPurple, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
         }
     }
 }
