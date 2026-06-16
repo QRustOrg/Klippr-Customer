@@ -1,6 +1,7 @@
 package com.example.klippr.core.network
 
 import com.example.klippr.core.datastore.SessionDataStore
+import com.example.klippr.favorites.data.remote.api.FavoriteApiService
 import com.example.klippr.iam.data.remote.api.AuthApiService
 import com.example.klippr.profile.data.remote.api.ProfileApiService
 import com.example.klippr.promotions.data.remote.api.PromotionApiService
@@ -36,4 +37,6 @@ class NetworkModule(sessionStore: SessionDataStore) {
     val profileApi: ProfileApiService = retrofit.create(ProfileApiService::class.java)
     val promotionApi: PromotionApiService = retrofit.create(PromotionApiService::class.java)
     val redemptionApi: RedemptionApiService = retrofit.create(RedemptionApiService::class.java)
+
+    val favoriteApi: FavoriteApiService = retrofit.create(FavoriteApiService::class.java)
 }

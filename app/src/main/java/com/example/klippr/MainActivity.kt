@@ -37,6 +37,11 @@ import com.example.klippr.redemption.domain.usecase.GetConsumerRedemptionsUseCas
 import com.example.klippr.redemption.domain.usecase.GetRedemptionByIdUseCase
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.ui.theme.KlipprTheme
+import com.example.klippr.favorites.data.repository.FavoriteRepositoryImpl
+import com.example.klippr.favorites.domain.usecase.GetUserFavoritesUseCase
+import com.example.klippr.favorites.domain.usecase.SaveFavoriteUseCase
+import com.example.klippr.favorites.domain.usecase.RemoveFavoriteUseCase
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -113,6 +118,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val favoriteViewModel: FavoriteViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                val repository = FavoriteRepositoryImpl(network.favoriteApi)
+                return FavoriteViewModel(
+                    getUserFavorites = GetUserFavoritesUseCase(repository),
+                    saveFavorite     = SaveFavoriteUseCase(repository),
+                    removeFavorite   = RemoveFavoriteUseCase(repository),
+                ) as T
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -123,6 +142,7 @@ class MainActivity : ComponentActivity() {
                     profileViewModel = profileViewModel,
                     viewModel = viewModel,
                     redemptionViewModel = redemptionViewModel,
+                    favoritesViewModel = favoriteViewModel,
                 )
             }
         }

@@ -61,6 +61,7 @@ fun PromotionDetailScreen(
     viewModel: PromotionViewModel,
     onBack: () -> Unit,
     onApplyDiscount: (Promotion) -> Unit,
+    onToggleFavorite: (promotionId: String, isFavorite: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.detailState.collectAsStateWithLifecycle()
@@ -78,7 +79,10 @@ fun PromotionDetailScreen(
                 },
                 actions = {
                     state.promotion?.let { promo ->
-                        IconButton(onClick = { viewModel.toggleFavorite(promo.id, !promo.isFavorite) }) {
+                        IconButton(onClick = {
+                            viewModel.toggleFavorite(promo.id, !promo.isFavorite)
+                            onToggleFavorite(promo.id, !promo.isFavorite)
+                        }) {
                             Icon(
                                 imageVector = if (promo.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                                 contentDescription = "Favorito",

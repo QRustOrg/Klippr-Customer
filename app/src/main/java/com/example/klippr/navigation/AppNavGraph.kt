@@ -11,6 +11,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.klippr.core.presentation.SplashScreen
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
+import com.example.klippr.favorites.presentation.view.FavoritesScreen
 import com.example.klippr.home.presentation.view.HomeScreen
 import com.example.klippr.iam.presentation.view.ForgotPasswordScreen
 import com.example.klippr.iam.presentation.view.ResetPasswordScreen
@@ -36,6 +38,7 @@ fun AppNavGraph(
     profileViewModel: ProfileViewModel,
     viewModel: PromotionViewModel,
     redemptionViewModel: RedemptionViewModel,
+    favoritesViewModel: FavoriteViewModel,
     navController: NavHostController = rememberNavController(),
 ) {
     // Cierra sesión y vuelve al login limpiando todo el backstack.
@@ -92,6 +95,7 @@ fun AppNavGraph(
                 onNavigateToExplore = { navController.navigate(Routes.EXPLORE) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
                 onNavigateToCreate = { navController.navigate(Routes.CREATE_PROMOTION) },
+                onNavigateToFavorites = { navController.navigate(Routes.FAVORITES) },
                 onPromotionClick = { id -> navController.navigate(Routes.promotionDetail(id)) },
             )
         }
@@ -144,6 +148,13 @@ fun AppNavGraph(
                 },
                 onNavigateToCreate = { navController.navigate(Routes.CREATE_PROMOTION) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
+                onNavigateToFavorites = { navController.navigate(Routes.FAVORITES) },
+                onAddFavorite = { promotionId ->
+                    favoritesViewModel.addFavorite(
+                        userId = authViewModel.state.value.user?.userId.orEmpty(),
+                        promotionId = promotionId,
+                    )
+                },
             )
         }
 
@@ -178,6 +189,16 @@ fun AppNavGraph(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onApplyDiscount = { promo -> redemptionViewModel.generate(promo) },
+                onToggleFavorite = { promotionId, isFavorite ->
+                    val userId = authViewModel.state.value.user?.userId.orEmpty()
+                    android.util.Log.d("FAVORITES", "toggleFavorite: promotionId=$promotionId, isFavorite=$isFavorite, userId=$userId")
+                    if (isFavorite) {
+                        favoritesViewModel.addFavorite(
+                            userId = userId,
+                            promotionId = promotionId,
+                        )
+                    }
+                },
             )
         }
 
@@ -220,5 +241,19 @@ fun AppNavGraph(
                 onNavigatePromos = { navController.navigate(Routes.EXPLORE) },
             )
         }
+
+        composable(Routes.FAVORITES) {
+            val authState by authViewModel.state.collectAsStateWithLifecycle()
+            FavoritesScreen(
+                favoriteViewModel = favoritesViewModel,
+                promotionViewModel = viewModel,
+                userId = authState.user?.userId.orEmpty(),
+                onNavigateComunidad = { navController.navigate(Routes.CREATE_PROMOTION) },
+                onNavigateHome = { navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } } },
+                onNavigatePromos = { navController.navigate(Routes.EXPLORE) },
+                onNavigateToDetail = { id -> navController.navigate(Routes.promotionDetail(id)) },
+            )
+        }
+
     }
 }

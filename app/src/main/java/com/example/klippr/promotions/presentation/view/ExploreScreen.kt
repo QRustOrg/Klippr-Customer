@@ -139,6 +139,8 @@ fun ExploreScreen(
     onNavigateToHome: () -> Unit = {},
     onNavigateToCreate: () -> Unit = {},
     onNavigateToMisPromos: () -> Unit = {},
+    onNavigateToFavorites: () -> Unit = {},
+    onAddFavorite: (promotionId: String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.listState.collectAsStateWithLifecycle()
@@ -212,6 +214,7 @@ fun ExploreScreen(
                 onNavigateToHome = onNavigateToHome,
                 onNavigateToCreate = onNavigateToCreate,
                 onNavigateToMisPromos = onNavigateToMisPromos,
+                onNavigateToFavorites = onNavigateToFavorites,
             )
         },
         containerColor = Color.White,
@@ -364,7 +367,10 @@ fun ExploreScreen(
                     isGenerating = redemptionState.isGenerating,
                     errorMessage = redemptionState.error,
                     onDismiss = { selectedPromoId = null; redemptionViewModel.consumeError() },
-                    onToggleFavorite = { viewModel.toggleFavorite(selectedPromo.id, !selectedPromo.isFavorite) },
+                    onToggleFavorite = {
+                        viewModel.toggleFavorite(selectedPromo.id, !selectedPromo.isFavorite)
+                        if (!selectedPromo.isFavorite) onAddFavorite(selectedPromo.id)
+                    },
                     onGenerateQr = { redemptionViewModel.generate(selectedPromo) },
                 )
             }
@@ -932,6 +938,7 @@ private fun ExploreBottomBar(
     onNavigateToHome: () -> Unit = {},
     onNavigateToCreate: () -> Unit = {},
     onNavigateToMisPromos: () -> Unit = {},
+    onNavigateToFavorites: () -> Unit = {},
 ) {
     val inactive = TextSecondary
     NavigationBar(containerColor = Color.White, tonalElevation = 4.dp) {
@@ -949,7 +956,7 @@ private fun ExploreBottomBar(
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
         )
         NavigationBarItem(
-            selected = false, onClick = onNavigateToMisPromos,
+            selected = false, onClick = onNavigateToFavorites,
             icon = { Icon(Icons.Default.FavoriteBorder, contentDescription = "Favoritos") },
             label = { Text("Favoritos", fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),

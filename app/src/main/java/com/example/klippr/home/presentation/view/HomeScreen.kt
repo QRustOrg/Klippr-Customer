@@ -89,6 +89,7 @@ fun HomeScreen(
     onNavigateToExplore: () -> Unit,
     onNavigateToMisPromos: () -> Unit,
     onNavigateToCreate: () -> Unit,
+    onNavigateToFavorites: () -> Unit,
     onPromotionClick: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -121,7 +122,7 @@ fun HomeScreen(
                 current = KlipprTab.INICIO,
                 onComunidad = onNavigateToCreate,
                 onInicio = { /* ya estamos en Home */ },
-                onFavoritos = onNavigateToMisPromos,
+                onFavoritos = onNavigateToFavorites,
                 onPromos = onNavigateToExplore,
             )
         },
