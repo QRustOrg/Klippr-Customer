@@ -16,6 +16,8 @@ object Routes {
     const val CREATE_PROMOTION = "create_promotion"
     const val MIS_PROMOS = "mis_promos"
 
+    const val COMMUNITY = "community"
+
     // Rutas con argumentos
     const val PROMOTION_DETAIL = "promotion_detail/{promotionId}"
     const val QR_CODE = "qr_code/{redemptionId}"

@@ -10,6 +10,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.klippr.community.presentation.view.CommunityScreen
+import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
+import com.example.klippr.core.datastore.SessionDataStore
 import com.example.klippr.core.presentation.SplashScreen
 import com.example.klippr.home.presentation.view.HomeScreen
 import com.example.klippr.iam.presentation.view.ForgotPasswordScreen
@@ -28,17 +31,16 @@ import com.example.klippr.redemption.presentation.view.QrCodeScreen
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.settings.presentation.view.SettingsScreen
 
-// @author Samuel Bonifacio
-
 @Composable
 fun AppNavGraph(
     authViewModel: AuthViewModel,
     profileViewModel: ProfileViewModel,
     viewModel: PromotionViewModel,
     redemptionViewModel: RedemptionViewModel,
+    communityViewModel: CommunityViewModel,          // ← nuevo
+    sessionStore: SessionDataStore,                  // ← nuevo
     navController: NavHostController = rememberNavController(),
 ) {
-    // Cierra sesión y vuelve al login limpiando todo el backstack.
     val logout: () -> Unit = {
         authViewModel.signOut()
         navController.navigate(Routes.SIGN_IN) {
@@ -85,45 +87,45 @@ fun AppNavGraph(
 
         composable(Routes.HOME) {
             HomeScreen(
-                profileViewModel = profileViewModel,
-                promotionViewModel = viewModel,
+                profileViewModel    = profileViewModel,
+                promotionViewModel  = viewModel,
                 redemptionViewModel = redemptionViewModel,
-                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
-                onNavigateToExplore = { navController.navigate(Routes.EXPLORE) },
+                onNavigateToSettings  = { navController.navigate(Routes.SETTINGS) },
+                onNavigateToExplore   = { navController.navigate(Routes.EXPLORE) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
-                onNavigateToCreate = { navController.navigate(Routes.CREATE_PROMOTION) },
-                onPromotionClick = { id -> navController.navigate(Routes.promotionDetail(id)) },
+                onNavigateToCreate    = { navController.navigate(Routes.CREATE_PROMOTION) },
+                onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
+                onPromotionClick      = { id -> navController.navigate(Routes.promotionDetail(id)) },
             )
         }
 
         composable(Routes.SETTINGS) {
             SettingsScreen(
-                onBack = { navController.popBackStack() },
+                onBack              = { navController.popBackStack() },
                 onNavigateToProfile = { navController.navigate(Routes.PROFILE) },
-                onLogout = logout,
+                onLogout            = logout,
             )
         }
 
         composable(Routes.PROFILE) {
             ProfileScreen(
                 viewModel = profileViewModel,
-                onBack = { navController.popBackStack() },
-                onLogout = logout,
+                onBack    = { navController.popBackStack() },
+                onLogout  = logout,
             )
         }
 
         composable(Routes.FORGOT_PASSWORD) {
             ForgotPasswordScreen(
-                viewModel = authViewModel,
+                viewModel       = authViewModel,
                 onEmailVerified = { navController.navigate(Routes.RESET_PASSWORD) },
-                onBack = { navController.popBackStack() },
+                onBack          = { navController.popBackStack() },
             )
         }
 
         composable(Routes.RESET_PASSWORD) {
             ResetPasswordScreen(
-                viewModel = authViewModel,
-                // Vuelve a SignIn para iniciar sesión con la nueva contraseña.
+                viewModel         = authViewModel,
                 onPasswordChanged = {
                     navController.navigate(Routes.SIGN_IN) {
                         popUpTo(Routes.SIGN_IN) { inclusive = true }
@@ -135,21 +137,21 @@ fun AppNavGraph(
 
         composable(Routes.EXPLORE) {
             ExploreScreen(
-                viewModel = viewModel,
+                viewModel           = viewModel,
                 redemptionViewModel = redemptionViewModel,
-                onBack = { navController.popBackStack() },
-                onNavigateToQr = { id -> navController.navigate(Routes.qrCode(id)) },
-                onNavigateToHome = {
+                onBack              = { navController.popBackStack() },
+                onNavigateToQr      = { id -> navController.navigate(Routes.qrCode(id)) },
+                onNavigateToHome    = {
                     navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } }
                 },
-                onNavigateToCreate = { navController.navigate(Routes.CREATE_PROMOTION) },
+                onNavigateToCreate    = { navController.navigate(Routes.CREATE_PROMOTION) },
                 onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
             )
         }
 
         composable(Routes.CREATE_PROMOTION) {
             CreatePromotionScreen(
-                onBack = { navController.popBackStack() },
+                onBack           = { navController.popBackStack() },
                 onNavigateToHome = {
                     navController.navigate(Routes.EXPLORE) {
                         popUpTo(Routes.EXPLORE) { inclusive = true }
@@ -162,10 +164,9 @@ fun AppNavGraph(
             route = Routes.PROMOTION_DETAIL,
             arguments = listOf(navArgument(Routes.ARG_PROMOTION_ID) { type = NavType.StringType }),
         ) { backStackEntry ->
-            val promotionId = backStackEntry.arguments?.getString(Routes.ARG_PROMOTION_ID).orEmpty()
+            val promotionId    = backStackEntry.arguments?.getString(Routes.ARG_PROMOTION_ID).orEmpty()
             val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
 
-            // US-04: al generarse el código, navega a la pantalla de QR.
             LaunchedEffect(redemptionState.generated) {
                 redemptionState.generated?.let { code ->
                     navController.navigate(Routes.qrCode(code.id))
@@ -174,9 +175,9 @@ fun AppNavGraph(
             }
 
             PromotionDetailScreen(
-                promotionId = promotionId,
-                viewModel = viewModel,
-                onBack = { navController.popBackStack() },
+                promotionId     = promotionId,
+                viewModel       = viewModel,
+                onBack          = { navController.popBackStack() },
                 onApplyDiscount = { promo -> redemptionViewModel.generate(promo) },
             )
         }
@@ -185,19 +186,19 @@ fun AppNavGraph(
             route = Routes.QR_CODE,
             arguments = listOf(navArgument(Routes.ARG_REDEMPTION_ID) { type = NavType.StringType }),
         ) { backStackEntry ->
-            val redemptionId = backStackEntry.arguments?.getString(Routes.ARG_REDEMPTION_ID).orEmpty()
+            val redemptionId    = backStackEntry.arguments?.getString(Routes.ARG_REDEMPTION_ID).orEmpty()
             val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
-            val code = redemptionState.codeById(redemptionId)
+            val code            = redemptionState.codeById(redemptionId)
 
             LaunchedEffect(redemptionId) {
                 redemptionViewModel.loadCodeById(redemptionId)
             }
 
             QrCodeScreen(
-                code = code,
-                isLoading = redemptionState.isLoadingCode && code == null,
-                errorMessage = redemptionState.codeError.takeIf { code == null },
-                onBack = { navController.popBackStack() },
+                code          = code,
+                isLoading     = redemptionState.isLoadingCode && code == null,
+                errorMessage  = redemptionState.codeError.takeIf { code == null },
+                onBack        = { navController.popBackStack() },
                 onGoToMisPromos = {
                     navController.navigate(Routes.MIS_PROMOS) {
                         popUpTo(Routes.EXPLORE)
@@ -209,15 +210,27 @@ fun AppNavGraph(
 
         composable(Routes.MIS_PROMOS) {
             MisPromosScreen(
-                viewModel = redemptionViewModel,
-                onCodeClick = { id -> navController.navigate(Routes.qrCode(id)) },
-                onNavigateCommunity = { navController.navigate(Routes.CREATE_PROMOTION) },
-                onNavigateHome = {
+                viewModel           = redemptionViewModel,
+                onCodeClick         = { id -> navController.navigate(Routes.qrCode(id)) },
+                onNavigateCommunity = { navController.navigate(Routes.COMMUNITY) },
+                onNavigateHome      = {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
                 onNavigatePromos = { navController.navigate(Routes.EXPLORE) },
+            )
+        }
+
+        composable(Routes.COMMUNITY) {
+            val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
+            val currentUserId = session?.user?.userId ?: ""
+            CommunityScreen(
+                viewModel         = communityViewModel,
+                currentUserId     = currentUserId,
+                onNavigateHome    = { navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } } },
+                onNavigatePromos  = { navController.navigate(Routes.EXPLORE) },
+                onNavigateMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
             )
         }
     }

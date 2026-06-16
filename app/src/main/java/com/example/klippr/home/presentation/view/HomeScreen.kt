@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -88,9 +87,10 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToExplore: () -> Unit,
     onNavigateToMisPromos: () -> Unit,
-    onNavigateToCreate: () -> Unit,
+    onNavigateToCommunity: () -> Unit,
     onPromotionClick: (String) -> Unit = {},
     modifier: Modifier = Modifier,
+    onNavigateToCreate: () -> Unit,
 ) {
     val profileState by profileViewModel.state.collectAsStateWithLifecycle()
     val promoState by promotionViewModel.listState.collectAsStateWithLifecycle()
@@ -119,8 +119,8 @@ fun HomeScreen(
         bottomBar = {
             KlipprBottomBar(
                 current = KlipprTab.INICIO,
-                onComunidad = onNavigateToCreate,
-                onInicio = { /* ya estamos en Home */ },
+                onComunidad = onNavigateToCommunity,
+                onInicio = { },
                 onFavoritos = onNavigateToMisPromos,
                 onPromos = onNavigateToExplore,
             )

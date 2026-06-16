@@ -8,6 +8,11 @@ import androidx.activity.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
+import com.example.klippr.community.data.repository.ReviewRepositoryImpl
+import com.example.klippr.community.domain.usecase.CanUserReviewUseCase
+import com.example.klippr.community.domain.usecase.GetAllReviewsUseCase
+import com.example.klippr.community.domain.usecase.PostReviewUseCase
+import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
 import com.example.klippr.core.database.KlipprDatabase
 import com.example.klippr.core.datastore.SessionDataStore
 import com.example.klippr.core.network.NetworkModule
@@ -40,33 +45,33 @@ import com.example.klippr.ui.theme.KlipprTheme
 
 class MainActivity : ComponentActivity() {
 
-    // Room singleton lazy; se crea la primera vez que se accede.
     private val db by lazy {
         Room.databaseBuilder(applicationContext, KlipprDatabase::class.java, "klippr.db")
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 
-    // Sesión local (token + userId) e infraestructura de red compartida con interceptor Bearer.
     private val sessionStore by lazy { SessionDataStore(applicationContext) }
     private val network by lazy { NetworkModule(sessionStore) }
 
-    // IAM
     private val authRepository by lazy { AuthRepositoryImpl(network.authApi, sessionStore) }
-
-    // Perfil: usa el userId de la sesión para consultar GET /api/Users/{userId}.
     private val profileRepository by lazy { ProfileRepositoryImpl(network.profileApi, sessionStore) }
+
+    // ── Community ────────────────────────────────────────────────────────────
+    private val reviewRepository by lazy {
+        ReviewRepositoryImpl(network.reviewApi, db.reviewDao())
+    }
 
     private val authViewModel: AuthViewModel by viewModels {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T = AuthViewModel(
-                signInUseCase = SignInUseCase(authRepository),
+                signInUseCase         = SignInUseCase(authRepository),
                 signUpConsumerUseCase = SignUpConsumerUseCase(authRepository),
                 getCurrentUserUseCase = GetCurrentUserUseCase(authRepository),
-                signOutUseCase = SignOutUseCase(authRepository),
-                verifyEmailUseCase = VerifyEmailUseCase(authRepository),
-                resetPasswordUseCase = ResetPasswordUseCase(authRepository),
+                signOutUseCase        = SignOutUseCase(authRepository),
+                verifyEmailUseCase    = VerifyEmailUseCase(authRepository),
+                resetPasswordUseCase  = ResetPasswordUseCase(authRepository),
             ) as T
         }
     }
@@ -86,12 +91,12 @@ class MainActivity : ComponentActivity() {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 val repository = PromotionRepositoryImpl(db.promotionDao(), network.promotionApi, network.profileApi)
                 return PromotionViewModel(
-                    getAllPromotions     = GetAllPromotionsUseCase(repository),
-                    getActivePromotions  = GetActivePromotionsUseCase(repository),
-                    getPromotionById     = GetPromotionByIdUseCase(repository),
-                    searchPromotions     = SearchPromotionsUseCase(repository),
+                    getAllPromotions       = GetAllPromotionsUseCase(repository),
+                    getActivePromotions   = GetActivePromotionsUseCase(repository),
+                    getPromotionById      = GetPromotionByIdUseCase(repository),
+                    searchPromotions      = SearchPromotionsUseCase(repository),
                     toggleFavoriteUseCase = ToggleFavoriteUseCase(repository),
-                    repository           = repository,
+                    repository            = repository,
                 ) as T
             }
         }
@@ -104,13 +109,21 @@ class MainActivity : ComponentActivity() {
                 val mapper = RedemptionMapper(network.promotionApi)
                 val repository = RedemptionRepositoryImpl(network.redemptionApi, mapper)
                 return RedemptionViewModel(
-                    generateRedemption = GenerateRedemptionUseCase(repository),
+                    generateRedemption     = GenerateRedemptionUseCase(repository),
                     getConsumerRedemptions = GetConsumerRedemptionsUseCase(repository),
-                    getRedemptionById = GetRedemptionByIdUseCase(repository),
-                    getCurrentUser = GetCurrentUserUseCase(authRepository),
+                    getRedemptionById      = GetRedemptionByIdUseCase(repository),
+                    getCurrentUser         = GetCurrentUserUseCase(authRepository),
                 ) as T
             }
         }
+    }
+
+    private val communityViewModel: CommunityViewModel by viewModels {
+        CommunityViewModel.Factory(
+            getAllReviewsUseCase  = GetAllReviewsUseCase(reviewRepository),
+            postReviewUseCase    = PostReviewUseCase(reviewRepository),
+            canUserReviewUseCase = CanUserReviewUseCase(reviewRepository),
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,10 +132,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             KlipprTheme {
                 AppNavGraph(
-                    authViewModel = authViewModel,
-                    profileViewModel = profileViewModel,
-                    viewModel = viewModel,
+                    authViewModel       = authViewModel,
+                    profileViewModel    = profileViewModel,
+                    viewModel           = viewModel,
                     redemptionViewModel = redemptionViewModel,
+                    communityViewModel  = communityViewModel,
+                    sessionStore        = sessionStore,
                 )
             }
         }
