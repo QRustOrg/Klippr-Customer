@@ -24,7 +24,7 @@ fun ReviewDto.toEntity() = ReviewEntity(
     createdAt = createdAt,
     isVerifiedPurchase = isVerifiedPurchase,
     likeCount = likeCount,
-    isLikedByCurrentUser = false,
+    isLikedByCurrentUser = likedByCurrentUser,
 )
 
 // Entity → Domain
@@ -60,7 +60,7 @@ fun ReviewDto.toDomain() = Review(
     createdAt = createdAt,
     isVerifiedPurchase = isVerifiedPurchase,
     likeCount = likeCount,
-    isLikedByCurrentUser = false,
+    isLikedByCurrentUser = likedByCurrentUser,
 )
 
 fun CommentDto.toDomain(fallbackReviewId: String) = ReviewComment(

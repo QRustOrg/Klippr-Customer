@@ -54,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
+import com.example.klippr.redemption.util.formatVence
 import com.example.klippr.shared.presentation.component.DiscountBadge
 import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 
@@ -242,6 +243,14 @@ private fun PromotionDetailContent(
             RedemptionsInfo(
                 available = promotion.availableRedemptions,
                 current = promotion.currentRedemptions,
+            )
+
+            // Validity
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "📅 Vigente hasta ${formatVence(promotion.endDate)}",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.Gray,
             )
 
             // Location

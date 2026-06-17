@@ -35,7 +35,7 @@ interface ReviewApiService {
     ): Boolean
 
     @POST("api/reviews/{id}/like")
-    suspend fun toggleLike(@Path("id") reviewId: String): ReviewDto
+    suspend fun toggleLike(@Path("id") reviewId: String)
 
     @GET("api/reviews/{id}/comments")
     suspend fun getComments(@Path("id") reviewId: String): List<CommentDto>
@@ -44,5 +44,5 @@ interface ReviewApiService {
     suspend fun postComment(
         @Path("id") reviewId: String,
         @Body request: PostCommentRequest
-    ): CommentDto
+    )
 }

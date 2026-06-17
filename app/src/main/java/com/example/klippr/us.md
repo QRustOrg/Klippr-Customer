@@ -145,11 +145,11 @@
 
 **Title:** Calificar promoción
 
-**Description:** Como usuario, quiere calificar.
+**Description:** Como usuario, quiere calificar. *(Bundled: el rating va dentro del flujo de publicar reseña de US-13, no es una pantalla/acción separada — decisión de producto confirmada.)*
 
 - Dado una promoción,
-- Cuando califica,
-- Entonces se guarda puntuación.
+- Cuando califica (como parte de publicar su reseña, US-13),
+- Entonces se guarda puntuación junto con la reseña.
 
 ---
 

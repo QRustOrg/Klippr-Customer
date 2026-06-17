@@ -16,6 +16,7 @@ data class ReviewDto(
     @SerializedName("createdAt")      val createdAt: Long,
     @SerializedName("verified")       val isVerifiedPurchase: Boolean,
     @SerializedName("likeCount")      val likeCount: Int = 0,
+    @SerializedName("likedByCurrentUser") val likedByCurrentUser: Boolean = false,
 )
 
 data class PostReviewRequest(

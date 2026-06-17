@@ -188,15 +188,12 @@ class CommunityViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmittingComment = true, errorMessage = null) }
             postReviewCommentUseCase(reviewId, comment).fold(
-                onSuccess = { created ->
+                onSuccess = {
                     _uiState.update {
-                        val current = it.commentsByReviewId[reviewId].orEmpty()
-                        it.copy(
-                            isSubmittingComment = false,
-                            draftReplyComment = "",
-                            commentsByReviewId = it.commentsByReviewId + (reviewId to (current + created)),
-                        )
+                        it.copy(isSubmittingComment = false, draftReplyComment = "")
                     }
+                    // El POST devuelve 200 sin body; recargamos del servidor.
+                    loadComments(reviewId)
                 },
                 onFailure = { e ->
                     _uiState.update {
