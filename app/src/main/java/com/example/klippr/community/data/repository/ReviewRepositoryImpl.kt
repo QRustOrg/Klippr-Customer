@@ -5,9 +5,12 @@ import com.example.klippr.community.data.local.entity.ReviewEntity
 import com.example.klippr.community.data.mapper.toDomain
 import com.example.klippr.community.data.mapper.toEntity
 import com.example.klippr.community.data.remote.api.ReviewApiService
+import com.example.klippr.community.data.remote.dto.PostCommentRequest
 import com.example.klippr.community.data.remote.dto.PostReviewRequest
 import com.example.klippr.community.domain.model.Review
+import com.example.klippr.community.domain.model.ReviewComment
 import com.example.klippr.community.domain.repository.ReviewRepository
+import com.example.klippr.core.network.safeApiCall
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
@@ -68,6 +71,20 @@ class ReviewRepositoryImpl(
         } else {
             Result.failure(Exception("Reseña no encontrada"))
         }
+    }
+
+    override suspend fun getComments(reviewId: String): Result<List<ReviewComment>> = try {
+        val comments = safeApiCall { api.getComments(reviewId) }.map { it.toDomain(reviewId) }
+        Result.success(comments)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun postComment(reviewId: String, comment: String): Result<ReviewComment> = try {
+        val created = safeApiCall { api.postComment(reviewId, PostCommentRequest(comment)) }.toDomain(reviewId)
+        Result.success(created)
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 
     override suspend fun canUserReview(promotionId: String, userId: String): Boolean = try {

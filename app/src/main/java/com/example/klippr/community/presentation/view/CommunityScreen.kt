@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.klippr.community.domain.model.Review
+import com.example.klippr.community.domain.model.ReviewComment
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
@@ -54,6 +55,20 @@ fun CommunityScreen(
             onRatingChanged = viewModel::onRatingChanged,
             onCommentChanged = viewModel::onCommentChanged,
             onSubmit = viewModel::submitReview
+        )
+    }
+
+    if (uiState.isCommentSheetOpen) {
+        val reviewId = uiState.selectedReviewId.orEmpty()
+        CommentBottomSheet(
+            title = uiState.selectedReviewTitle ?: "Publicacion",
+            comments = uiState.commentsByReviewId[reviewId].orEmpty(),
+            draft = uiState.draftReplyComment,
+            isLoading = uiState.isLoadingComments,
+            isSubmitting = uiState.isSubmittingComment,
+            onDraftChanged = viewModel::onReplyCommentChanged,
+            onSubmit = viewModel::submitComment,
+            onDismiss = viewModel::closeCommentSheet,
         )
     }
 
@@ -103,7 +118,9 @@ fun CommunityScreen(
                 else -> {
                     ReviewFeed(
                         reviews = uiState.reviews,
+                        commentsByReviewId = uiState.commentsByReviewId,
                         onLike = { reviewId -> viewModel.toggleLike(reviewId) },
+                        onComment = viewModel::openCommentSheet,
                     )
                 }
             }
@@ -128,7 +145,9 @@ fun CommunityScreen(
 @Composable
 private fun ReviewFeed(
     reviews: List<Review>,
+    commentsByReviewId: Map<String, List<ReviewComment>>,
     onLike: (String) -> Unit,
+    onComment: (Review) -> Unit,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -146,7 +165,9 @@ private fun ReviewFeed(
         items(reviews, key = { it.id }) { review ->
             ReviewCard(
                 review = review,
+                commentCount = commentsByReviewId[review.id]?.size,
                 onLike = { onLike(review.id) },
+                onComment = { onComment(review) },
             )
         }
         item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -155,7 +176,12 @@ private fun ReviewFeed(
 
 // ─── Card de reseña ──────────────────────────────────────────────────────────
 @Composable
-private fun ReviewCard(review: Review, onLike: () -> Unit) {
+private fun ReviewCard(
+    review: Review,
+    commentCount: Int?,
+    onLike: () -> Unit,
+    onComment: () -> Unit,
+) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -242,6 +268,20 @@ private fun ReviewCard(review: Review, onLike: () -> Unit) {
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                TextButton(onClick = onComment) {
+                    Icon(
+                        imageVector = Icons.Outlined.RateReview,
+                        contentDescription = "Comentar",
+                        tint = KlipprPurple,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = commentCount?.takeIf { it > 0 }?.toString() ?: "Comentar",
+                        fontSize = 12.sp,
+                        color = KlipprPurple,
+                    )
+                }
                 IconButton(onClick = onLike, modifier = Modifier.size(32.dp)) {
                     Icon(
                         imageVector = if (review.isLikedByCurrentUser) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
@@ -264,6 +304,136 @@ private fun ReviewCard(review: Review, onLike: () -> Unit) {
 }
 
 // ─── Avatar circular con inicial ─────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CommentBottomSheet(
+    title: String,
+    comments: List<ReviewComment>,
+    draft: String,
+    isLoading: Boolean,
+    isSubmitting: Boolean,
+    onDraftChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Text(
+                text = "Comentarios",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = KlipprPurple,
+            )
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(color = KlipprPurple)
+                    }
+                }
+                comments.isEmpty() -> {
+                    Text(
+                        text = "Aun no hay comentarios.",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().height(220.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(comments, key = { it.id.ifBlank { "${it.reviewId}-${it.createdAt}-${it.comment.hashCode()}" } }) { comment ->
+                            CommentRow(comment)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = draft,
+                onValueChange = onDraftChanged,
+                label = { Text("Escribe un comentario") },
+                minLines = 2,
+                maxLines = 4,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = onSubmit,
+                enabled = draft.isNotBlank() && !isSubmitting,
+                colors = ButtonDefaults.buttonColors(containerColor = KlipprPurple),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Publicar comentario", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentRow(comment: ReviewComment) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+    ) {
+        UserAvatar(name = comment.userName)
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = comment.userName,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF1A1A1A),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = formatDate(comment.createdAt),
+                    fontSize = 11.sp,
+                    color = Color.Gray,
+                )
+            }
+            Text(
+                text = comment.comment,
+                fontSize = 13.sp,
+                color = Color(0xFF333333),
+                lineHeight = 18.sp,
+            )
+        }
+    }
+}
+
 @Composable
 private fun UserAvatar(name: String) {
     val initial = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"

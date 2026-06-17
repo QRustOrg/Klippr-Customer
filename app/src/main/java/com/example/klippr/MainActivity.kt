@@ -11,6 +11,8 @@ import androidx.room.Room
 import com.example.klippr.community.data.repository.ReviewRepositoryImpl
 import com.example.klippr.community.domain.usecase.CanUserReviewUseCase
 import com.example.klippr.community.domain.usecase.GetAllReviewsUseCase
+import com.example.klippr.community.domain.usecase.GetReviewCommentsUseCase
+import com.example.klippr.community.domain.usecase.PostReviewCommentUseCase
 import com.example.klippr.community.domain.usecase.PostReviewUseCase
 import com.example.klippr.community.domain.usecase.ToggleLikeUseCase
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
@@ -132,6 +134,8 @@ class MainActivity : ComponentActivity() {
             postReviewUseCase    = PostReviewUseCase(reviewRepository),
             canUserReviewUseCase = CanUserReviewUseCase(reviewRepository),
             toggleLikeUseCase    = ToggleLikeUseCase(reviewRepository),
+            getReviewCommentsUseCase = GetReviewCommentsUseCase(reviewRepository),
+            postReviewCommentUseCase = PostReviewCommentUseCase(reviewRepository),
         )
     }
 

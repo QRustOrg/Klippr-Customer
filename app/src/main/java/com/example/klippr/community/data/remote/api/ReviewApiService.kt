@@ -1,5 +1,7 @@
 package com.example.klippr.community.data.remote.api
 
+import com.example.klippr.community.data.remote.dto.CommentDto
+import com.example.klippr.community.data.remote.dto.PostCommentRequest
 import com.example.klippr.community.data.remote.dto.PostReviewRequest
 import com.example.klippr.community.data.remote.dto.ReviewDto
 import retrofit2.http.Body
@@ -34,4 +36,13 @@ interface ReviewApiService {
 
     @POST("api/reviews/{id}/like")
     suspend fun toggleLike(@Path("id") reviewId: String): ReviewDto
+
+    @GET("api/reviews/{id}/comments")
+    suspend fun getComments(@Path("id") reviewId: String): List<CommentDto>
+
+    @POST("api/reviews/{id}/comments")
+    suspend fun postComment(
+        @Path("id") reviewId: String,
+        @Body request: PostCommentRequest
+    ): CommentDto
 }

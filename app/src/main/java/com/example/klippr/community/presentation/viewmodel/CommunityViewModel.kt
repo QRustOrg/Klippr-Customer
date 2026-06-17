@@ -3,8 +3,11 @@ package com.example.klippr.community.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.klippr.community.domain.model.Review
 import com.example.klippr.community.domain.usecase.CanUserReviewUseCase
 import com.example.klippr.community.domain.usecase.GetAllReviewsUseCase
+import com.example.klippr.community.domain.usecase.GetReviewCommentsUseCase
+import com.example.klippr.community.domain.usecase.PostReviewCommentUseCase
 import com.example.klippr.community.domain.usecase.PostReviewUseCase
 import com.example.klippr.community.domain.usecase.ToggleLikeUseCase
 import com.example.klippr.community.presentation.state.CommunityUiState
@@ -20,6 +23,8 @@ class CommunityViewModel(
     private val postReviewUseCase: PostReviewUseCase,
     private val canUserReviewUseCase: CanUserReviewUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
+    private val getReviewCommentsUseCase: GetReviewCommentsUseCase,
+    private val postReviewCommentUseCase: PostReviewCommentUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityUiState())
@@ -117,6 +122,94 @@ class CommunityViewModel(
         }
     }
 
+    fun openCommentSheet(review: Review) {
+        _uiState.update {
+            it.copy(
+                isCommentSheetOpen = true,
+                selectedReviewId = review.id,
+                selectedReviewTitle = review.promotionTitle,
+                draftReplyComment = "",
+                errorMessage = null,
+            )
+        }
+        loadComments(review.id)
+    }
+
+    fun closeCommentSheet() {
+        _uiState.update {
+            it.copy(
+                isCommentSheetOpen = false,
+                selectedReviewId = null,
+                selectedReviewTitle = null,
+                draftReplyComment = "",
+                isLoadingComments = false,
+                isSubmittingComment = false,
+            )
+        }
+    }
+
+    fun onReplyCommentChanged(comment: String) {
+        _uiState.update { it.copy(draftReplyComment = comment) }
+    }
+
+    fun loadComments(reviewId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingComments = true, errorMessage = null) }
+            getReviewCommentsUseCase(reviewId).fold(
+                onSuccess = { comments ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingComments = false,
+                            commentsByReviewId = it.commentsByReviewId + (reviewId to comments),
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingComments = false,
+                            errorMessage = e.message ?: "No se pudieron cargar los comentarios",
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    fun submitComment() {
+        val state = _uiState.value
+        val reviewId = state.selectedReviewId ?: return
+        val comment = state.draftReplyComment.trim()
+        if (comment.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Escribe un comentario") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmittingComment = true, errorMessage = null) }
+            postReviewCommentUseCase(reviewId, comment).fold(
+                onSuccess = { created ->
+                    _uiState.update {
+                        val current = it.commentsByReviewId[reviewId].orEmpty()
+                        it.copy(
+                            isSubmittingComment = false,
+                            draftReplyComment = "",
+                            commentsByReviewId = it.commentsByReviewId + (reviewId to (current + created)),
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    _uiState.update {
+                        it.copy(
+                            isSubmittingComment = false,
+                            errorMessage = e.message ?: "No se pudo registrar el comentario",
+                        )
+                    }
+                },
+            )
+        }
+    }
+
     fun dismissError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
@@ -126,6 +219,8 @@ class CommunityViewModel(
         private val postReviewUseCase: PostReviewUseCase,
         private val canUserReviewUseCase: CanUserReviewUseCase,
         private val toggleLikeUseCase: ToggleLikeUseCase,
+        private val getReviewCommentsUseCase: GetReviewCommentsUseCase,
+        private val postReviewCommentUseCase: PostReviewCommentUseCase,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -134,6 +229,8 @@ class CommunityViewModel(
                 postReviewUseCase,
                 canUserReviewUseCase,
                 toggleLikeUseCase,
+                getReviewCommentsUseCase,
+                postReviewCommentUseCase,
             ) as T
     }
 }

@@ -1,6 +1,7 @@
 package com.example.klippr.community.domain.repository
 
 import com.example.klippr.community.domain.model.Review
+import com.example.klippr.community.domain.model.ReviewComment
 import kotlinx.coroutines.flow.Flow
 
 interface ReviewRepository {
@@ -20,6 +21,10 @@ interface ReviewRepository {
     suspend fun canUserReview(promotionId: String, userId: String): Boolean
 
     suspend fun toggleLike(reviewId: String): Result<Review>
+
+    suspend fun getComments(reviewId: String): Result<List<ReviewComment>>
+
+    suspend fun postComment(reviewId: String, comment: String): Result<ReviewComment>
 
     suspend fun refreshAll()
 }
