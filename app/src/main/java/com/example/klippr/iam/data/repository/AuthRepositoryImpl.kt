@@ -26,8 +26,8 @@ class AuthRepositoryImpl(
             token = dto.token,
             user = User(userId = dto.userId, email = dto.email, role = dto.role),
         )
-        // Solo persistimos en disco (auto-login al reabrir) si el usuario marcó "Remember me".
-        if (rememberMe) sessionStore.save(session)
+        // Persistimos la sesion para que AuthInterceptor tenga token en los flujos autenticados.
+        sessionStore.save(session)
         return session
     }
 

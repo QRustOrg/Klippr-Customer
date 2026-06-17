@@ -97,13 +97,18 @@ import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
+import com.example.klippr.shared.presentation.component.KlipprBottomBar
+import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
+import com.example.klippr.ui.theme.KlipprTextDark
+import com.example.klippr.ui.theme.KlipprTextGray
 
 // @author Samuel Bonifacio
 
 private val KlipprPurple = Color(0xFF887BF3)
 private val KlipprLavender = Color(0xFFF0D8FF)
-private val TextPrimary = Color(0xFF1A1A1A)
-private val TextSecondary = Color(0xFF888888)
+private val TextPrimary = KlipprTextDark
+private val TextSecondary = KlipprTextGray
 
 /** Estado local de los filtros activos en la pantalla de exploración (US-02). */
 private data class ExploreFilterState(
@@ -209,10 +214,12 @@ fun ExploreScreen(
             )
         },
         bottomBar = {
-            ExploreBottomBar(
-                onNavigateToHome = onNavigateToHome,
-                onNavigateToCommunity = onNavigateToCommunity,
-                onNavigateToMisPromos = onNavigateToMisPromos,
+            KlipprBottomBar(
+                current = KlipprTab.PROMOS,
+                onComunidad = onNavigateToCommunity,
+                onInicio = onNavigateToHome,
+                onFavoritos = onNavigateToMisPromos,
+                onPromos = {},
             )
         },
         containerColor = Color.White,
@@ -228,7 +235,7 @@ fun ExploreScreen(
                     ExploreSearchRow(
                         query = searchQuery,
                         activeFilterCount = filterState.activeCount,
-                        onQueryChange = { searchQuery = it; viewModel.onSearchQueryChange(it) },
+                        onQueryChange = { searchQuery = it; viewModel.onActiveSearchQueryChange(it) },
                         onFilterClick = { showFilterPanel = !showFilterPanel },
                     )
                 }
@@ -465,6 +472,10 @@ private fun PromoModalDialog(
                 InfoLine("Cantidad:", "${promotion.availableRedemptions} disponibles")
                 Spacer(Modifier.height(10.dp))
                 InfoLine("Vigencia:", "Hasta el ${formatVigencia(promotion.endDate)}")
+                promotion.termsAndConditions?.takeIf { it.isNotBlank() }?.let { terms ->
+                    Spacer(Modifier.height(10.dp))
+                    InfoLine("Condiciones:", terms)
+                }
                 promotion.locationName?.takeIf { it.isNotBlank() }?.let { loc ->
                     Spacer(Modifier.height(10.dp))
                     InfoLine("Lugar:", loc)
@@ -928,57 +939,6 @@ private fun ExplorePromoCard(promotion: Promotion, onClick: () -> Unit) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ExploreBottomBar(
-    onNavigateToHome: () -> Unit = {},
-    onNavigateToCommunity: () -> Unit = {},
-    onNavigateToMisPromos: () -> Unit = {},
-) {
-    val inactive = TextSecondary
-    NavigationBar(containerColor = Color.White, tonalElevation = 4.dp) {
-        NavigationBarItem(
-            selected = false, onClick = onNavigateToCommunity,
-            icon = { Icon(Icons.Default.Group, contentDescription = "Comunidad") },
-            label = { Text("Comunidad", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
-        )
-        NavigationBarItem(
-            selected = false, onClick = onNavigateToHome,
-            icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
-            label = { Text("Inicio", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
-        )
-        NavigationBarItem(
-            selected = false, onClick = onNavigateToMisPromos,
-            icon = { Icon(Icons.Default.FavoriteBorder, contentDescription = "Favoritos") },
-            label = { Text("Favoritos", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
-        )
-        NavigationBarItem(
-            selected = true, onClick = { /* ya estamos en Promos */ },
-            icon = { Icon(Icons.Default.Apps, contentDescription = "Promos") },
-            label = { Text("Promos", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = KlipprPurple, selectedTextColor = KlipprPurple,
-                indicatorColor = KlipprLavender,
-                unselectedIconColor = inactive, unselectedTextColor = inactive,
-            ),
-        )
-    }
-}
-
-// Resuelve el imageKey del backend ("comida_pizza") a un drawable local con el mismo nombre.
-// Devuelve 0 si no existe, para que la card caiga al placeholder/imagen remota sin crashear.
-@Composable
-internal fun rememberPromoDrawableId(imageKey: String?): Int {
-    val ctx = LocalContext.current
-    return remember(imageKey) {
-        imageKey?.takeIf { it.isNotBlank() }
-            ?.let { ctx.resources.getIdentifier(it, "drawable", ctx.packageName) }
-            ?: 0
     }
 }
 

@@ -56,6 +56,7 @@ import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
+import com.example.klippr.shared.presentation.component.DiscountBadge
 
 // @author Samuel Bonifacio
 
@@ -242,8 +243,8 @@ fun PromotionCard(
                 )
                 Spacer(Modifier.height(6.dp))
                 DiscountBadge(
-                    value = promotion.discountValue,
                     type = promotion.discountType,
+                    value = promotion.discountValue,
                 )
                 promotion.rating?.let { r ->
                     Spacer(Modifier.height(4.dp))
@@ -260,24 +261,6 @@ fun PromotionCard(
                 )
             }
         }
-    }
-}
-
-
-@Composable
-fun DiscountBadge(value: Double, type: DiscountType, modifier: Modifier = Modifier) {
-    val label = when (type) {
-        DiscountType.PERCENTAGE -> "${value.toInt()}% OFF"
-        DiscountType.FIXED_AMOUNT -> "S/ ${"%.0f".format(value)} OFF"
-    }
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary)
-            .padding(horizontal = 10.dp, vertical = 3.dp),
-    ) {
-        Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }
 

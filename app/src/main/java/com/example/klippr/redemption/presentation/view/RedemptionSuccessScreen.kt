@@ -43,11 +43,12 @@ import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.util.generateQrBitmap
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.ui.theme.KlipprCardPink
 import com.example.klippr.ui.theme.KlipprPurple
 
 // @author Samuel Bonifacio
 
-private val CardPink = Color(0xFFFBEFFA)
+private val CardPink = KlipprCardPink
 private val CheckGreenBg = Color(0xFFB8F0C8)
 private val CheckGreen = Color(0xFF1E9E54)
 

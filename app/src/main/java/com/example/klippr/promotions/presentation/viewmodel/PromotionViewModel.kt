@@ -3,6 +3,7 @@ package com.example.klippr.promotions.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.promotions.domain.model.PromotionCategory
+import com.example.klippr.promotions.domain.model.PromotionStatus
 import com.example.klippr.promotions.domain.repository.PromotionRepository
 import com.example.klippr.promotions.domain.usecase.GetActivePromotionsUseCase
 import com.example.klippr.promotions.domain.usecase.GetAllPromotionsUseCase
@@ -99,6 +100,24 @@ class PromotionViewModel(
             searchPromotions(query)
                 .catch { e -> _listState.update { it.copy(error = e.message) } }
                 .collect { list -> _listState.update { it.copy(promotions = list) } }
+        }
+    }
+
+    fun onActiveSearchQueryChange(query: String) {
+        _listState.update { it.copy(searchQuery = query) }
+        if (query.isBlank()) {
+            loadActive()
+            return
+        }
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
+            searchPromotions(query)
+                .catch { e -> _listState.update { it.copy(error = e.message) } }
+                .collect { list ->
+                    _listState.update {
+                        it.copy(promotions = list.filter { promo -> promo.status == PromotionStatus.PUBLISHED })
+                    }
+                }
         }
     }
 

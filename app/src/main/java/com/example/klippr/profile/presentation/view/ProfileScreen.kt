@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.profile.domain.model.UserProfile
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
+import com.example.klippr.shared.presentation.component.KlipprTopBar
 import com.example.klippr.ui.theme.KlipprPurple
 
 // @author Samuel Bonifacio
@@ -58,15 +59,7 @@ fun ProfileScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Mi perfil", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 20.sp) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = KlipprPurple),
-            )
+            KlipprTopBar(title = "Mi perfil", onBack = onBack)
         },
         containerColor = Color.White,
         modifier = modifier,

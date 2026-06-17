@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.util.formatVence
 import com.example.klippr.redemption.util.generateQrBitmap
+import com.example.klippr.shared.presentation.component.KlipprTopBar
 import com.example.klippr.ui.theme.KlipprPurple
 
 // @author Samuel Bonifacio
@@ -60,15 +61,7 @@ fun QrCodeScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Tu código", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 20.sp) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = KlipprPurple),
-            )
+            KlipprTopBar(title = "Tu código", onBack = onBack)
         },
         containerColor = Color.White,
         modifier = modifier,

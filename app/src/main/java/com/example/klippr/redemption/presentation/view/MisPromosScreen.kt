@@ -72,11 +72,16 @@ import com.example.klippr.favorites.domain.model.Favorite
 import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
-import com.example.klippr.promotions.presentation.view.rememberPromoDrawableId
+import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.domain.model.RedemptionStatus
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
+import com.example.klippr.shared.presentation.component.KlipprBottomBar
+import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.discountLabel
+import com.example.klippr.ui.theme.KlipprTextDark
+import com.example.klippr.ui.theme.KlipprTextGray
 import com.example.klippr.redemption.util.dayBucket
 import com.example.klippr.redemption.util.formatHora
 import com.example.klippr.redemption.util.formatVence
@@ -87,8 +92,8 @@ import java.time.Instant
 
 // @author Samuel Bonifacio
 
-private val TextSecondary = Color(0xFF888888)
-private val TextPrimary = Color(0xFF1A1A1A)
+private val TextSecondary = KlipprTextGray
+private val TextPrimary = KlipprTextDark
 private val ActiveGreenBg = Color(0xFFB9F6CA)
 private val ActiveGreenFg = Color(0xFF1B7A3D)
 private val SavingsGreen = Color(0xFF1E9E54)
@@ -106,6 +111,7 @@ fun MisPromosScreen(
     favoriteViewModel: FavoriteViewModel,
     promotionViewModel: PromotionViewModel,
     currentUserId: String,
+    initialOuterTab: Int = 0,
     onCodeClick: (String) -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {},
     onNavigateCommunity: () -> Unit = {},
@@ -122,7 +128,7 @@ fun MisPromosScreen(
     LaunchedEffect(currentUserId) { favoriteViewModel.loadFavorites(currentUserId) }
 
     // 0 = Favoritos (tab por defecto), 1 = Mis Promos (activos/canjeados/expirados)
-    var outerTab by remember { mutableIntStateOf(0) }
+    var outerTab by remember(initialOuterTab) { mutableIntStateOf(initialOuterTab.coerceIn(0, 1)) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
     // US-13: ReviewBottomSheet como modal sobre MisPromos
@@ -149,10 +155,12 @@ fun MisPromosScreen(
             )
         },
         bottomBar = {
-            MisPromosBottomBar(
-                onNavigateCommunity = onNavigateCommunity,
-                onNavigateHome = onNavigateHome,
-                onNavigatePromos = onNavigatePromos,
+            KlipprBottomBar(
+                current = KlipprTab.FAVORITOS,
+                onComunidad = onNavigateCommunity,
+                onInicio = onNavigateHome,
+                onFavoritos = {},
+                onPromos = onNavigatePromos,
             )
         },
         containerColor = Color.White,
@@ -760,54 +768,8 @@ private fun CanjeadoPill() {
     }
 }
 
-@Composable
-private fun MisPromosBottomBar(
-    onNavigateCommunity: () -> Unit,
-    onNavigateHome: () -> Unit,
-    onNavigatePromos: () -> Unit,
-) {
-    val inactive = TextSecondary
-    NavigationBar(containerColor = Color.White, tonalElevation = 4.dp) {
-        NavigationBarItem(
-            selected = false, onClick = onNavigateCommunity,
-            icon = { Icon(Icons.Default.Group, contentDescription = "Comunidad") },
-            label = { Text("Comunidad", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
-        )
-        NavigationBarItem(
-            selected = false, onClick = onNavigateHome,
-            icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
-            label = { Text("Inicio", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
-        )
-        NavigationBarItem(
-            selected = true, onClick = {},
-            icon = { Icon(Icons.Default.FavoriteBorder, contentDescription = "Favoritos") },
-            label = { Text("Favoritos", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = KlipprPurple,
-                selectedTextColor = KlipprPurple,
-                indicatorColor = KlipprLavender,
-                unselectedIconColor = inactive,
-                unselectedTextColor = inactive,
-            ),
-        )
-        NavigationBarItem(
-            selected = false, onClick = onNavigatePromos,
-            icon = { Icon(Icons.Default.Apps, contentDescription = "Promos") },
-            label = { Text("Promos", fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactive, unselectedTextColor = inactive),
-        )
-    }
-}
-
-private fun RedemptionCode.discountLabel(): String {
-    val value = discountValue ?: discountAppliedAmount
-    return when (discountType) {
-        DiscountType.FIXED_AMOUNT -> "S/ ${value.toInt()} OFF"
-        else -> "${value.toInt()}% OFF"
-    }
-}
+private fun RedemptionCode.discountLabel(): String =
+    discountLabel(discountType, discountValue ?: discountAppliedAmount)
 
 private fun RedemptionCode.dateLabel(): String = when (status) {
     RedemptionStatus.REDEEMED -> "Usado: ${formatVence(redeemedAt)}"

@@ -95,7 +95,7 @@ fun AppNavGraph(
                 redemptionViewModel = redemptionViewModel,
                 onNavigateToSettings  = { navController.navigate(Routes.SETTINGS) },
                 onNavigateToExplore   = { navController.navigate(Routes.EXPLORE) },
-                onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
+                onNavigateToMisPromos = { navController.navigate(Routes.misPromos(Routes.TAB_CODES)) },
                 onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
                 onNavigateToQr        = { id -> navController.navigate(Routes.redemptionSuccess(id)) },
             )
@@ -149,7 +149,7 @@ fun AppNavGraph(
                     navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } }
                 },
                 onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
-                onNavigateToMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
+                onNavigateToMisPromos = { navController.navigate(Routes.misPromos(Routes.TAB_FAVORITES)) },
                 onAddFavorite = { promotionId -> favoriteViewModel.addFavorite(currentUserId, promotionId) },
             )
         }
@@ -210,7 +210,7 @@ fun AppNavGraph(
                 errorMessage  = redemptionState.codeError.takeIf { code == null },
                 onBack        = { navController.popBackStack() },
                 onGoToMisPromos = {
-                    navController.navigate(Routes.MIS_PROMOS) {
+                    navController.navigate(Routes.misPromos(Routes.TAB_CODES)) {
                         popUpTo(Routes.EXPLORE)
                     }
                 },
@@ -249,11 +249,21 @@ fun AppNavGraph(
                 onPromos     = goExplore,
                 onComunidad  = { navController.navigate(Routes.COMMUNITY) },
                 onInicio     = { navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } } },
-                onFavoritos  = { navController.navigate(Routes.MIS_PROMOS) },
+                onFavoritos  = { navController.navigate(Routes.misPromos(Routes.TAB_FAVORITES)) },
             )
         }
 
-        composable(Routes.MIS_PROMOS) {
+        composable(
+            route = Routes.MIS_PROMOS_WITH_TAB,
+            arguments = listOf(navArgument(Routes.ARG_TAB) {
+                type = NavType.StringType
+                defaultValue = Routes.TAB_FAVORITES
+            }),
+        ) { backStackEntry ->
+            val initialTab = when (backStackEntry.arguments?.getString(Routes.ARG_TAB)) {
+                Routes.TAB_CODES -> 1
+                else -> 0
+            }
             val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
             val currentUserId = session?.user?.userId ?: ""
             MisPromosScreen(
@@ -262,6 +272,7 @@ fun AppNavGraph(
                 favoriteViewModel   = favoriteViewModel,
                 promotionViewModel  = viewModel,
                 currentUserId       = currentUserId,
+                initialOuterTab     = initialTab,
                 onCodeClick         = { id -> navController.navigate(Routes.qrCode(id)) },
                 onNavigateToDetail  = { id -> navController.navigate(Routes.promotionDetail(id)) },
                 onNavigateCommunity = { navController.navigate(Routes.COMMUNITY) },
@@ -282,7 +293,7 @@ fun AppNavGraph(
                 currentUserId     = currentUserId,
                 onNavigateHome    = { navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } } },
                 onNavigatePromos  = { navController.navigate(Routes.EXPLORE) },
-                onNavigateMisPromos = { navController.navigate(Routes.MIS_PROMOS) },
+                onNavigateMisPromos = { navController.navigate(Routes.misPromos(Routes.TAB_FAVORITES)) },
             )
         }
     }

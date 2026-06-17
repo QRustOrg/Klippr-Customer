@@ -68,21 +68,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
-import com.example.klippr.promotions.presentation.view.rememberPromoDrawableId
+import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
+import com.example.klippr.shared.presentation.component.DiscountBadge
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.ui.theme.KlipprCardPink
 import com.example.klippr.ui.theme.KlipprPurple
+import com.example.klippr.ui.theme.KlipprTextDark
+import com.example.klippr.ui.theme.KlipprTextGray
 
 // @author Samuel Bonifacio
 
 private val ScreenBg = Color(0xFFFFFFFF)
-private val CardPink = Color(0xFFFBEFFA)
+private val CardPink = KlipprCardPink
 private val PurpleText = Color(0xFF8A6FE8)
-private val TextDark = Color(0xFF1A1A1A)
-private val TextGray = Color(0xFF888888)
+private val TextDark = KlipprTextDark
+private val TextGray = KlipprTextGray
 private val PromoImgPlaceholder = Color(0xFFE4DCFB)
 private val StarAmber = Color(0xFFFFC107)
 
@@ -356,7 +360,7 @@ private fun PromoCardVertical(
         )
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            DiscountBadge(promotion.discountLabel())
+            DiscountBadge(promotion.discountType, promotion.discountValue)
             promotion.rating?.let { r ->
                 Spacer(Modifier.width(8.dp))
                 Icon(Icons.Default.Star, contentDescription = null, tint = StarAmber, modifier = Modifier.size(14.dp))
@@ -407,7 +411,7 @@ private fun PromoApplyModal(
                 color = TextDark,
             )
             Spacer(Modifier.height(8.dp))
-            DiscountBadge(promotion.discountLabel())
+            DiscountBadge(promotion.discountType, promotion.discountValue)
             Spacer(Modifier.height(10.dp))
             Text(
                 text = promotion.description,
@@ -442,25 +446,6 @@ private fun PromoApplyModal(
             }
         }
     }
-}
-
-@Composable
-private fun DiscountBadge(label: String) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(KlipprPurple)
-            .border(1.dp, KlipprPurple, RoundedCornerShape(8.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-    }
-}
-
-private fun Promotion.discountLabel(): String = when (discountType) {
-    DiscountType.PERCENTAGE -> "${discountValue.toInt()}% OFF"
-    DiscountType.FIXED_AMOUNT -> "S/ ${discountValue.toInt()} OFF"
 }
 
 private fun PromotionCategory.label(): String = when (this) {
@@ -538,7 +523,7 @@ private fun CouponsCard(hasCoupons: Boolean, count: Int, onExplore: () -> Unit, 
         }
         Spacer(Modifier.height(12.dp))
         if (hasCoupons) {
-            Text("Tienes $count cupón${if (count == 1) "" else "es"}", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = PurpleText)
+            Text("Tienes $count cupon${if (count == 1) "" else "es"}", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = PurpleText)
             Spacer(Modifier.height(4.dp))
             Text("Toca 'Favoritos' para verlos", fontSize = 13.sp, color = PurpleText, fontWeight = FontWeight.SemiBold)
         } else {
@@ -593,9 +578,9 @@ private data class StoreCategory(val emoji: String, val label: String, val bg: C
 @Composable
 private fun StorePillsRow(onClick: () -> Unit) {
     val categories = listOf(
-        StoreCategory("☕", "Cafeterias", Color(0xFFC9A27E)),
         StoreCategory("🍔", "Fast Food", Color(0xFFF6CC8A)),
-        StoreCategory("🛒", "Productos", Color(0xFFA9D4F5)),
+        StoreCategory("🎬", "Entretenimiento", Color(0xFFC9A27E)),
+        StoreCategory("💊", "Salud", Color(0xFFA9D4F5)),
         StoreCategory("👗", "Moda", Color(0xFFB6E5C0)),
     )
     LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {

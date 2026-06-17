@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.klippr.shared.presentation.component.KlipprTopBar
 import com.example.klippr.ui.theme.KlipprPurple
 
 // @author Samuel Bonifacio
@@ -49,15 +50,7 @@ fun SettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Ajustes", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 20.sp) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = KlipprPurple),
-            )
+            KlipprTopBar(title = "Ajustes", onBack = onBack)
         },
         containerColor = Color.White,
         modifier = modifier,

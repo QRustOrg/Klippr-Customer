@@ -6,4 +6,6 @@ import kotlinx.coroutines.flow.Flow
 
 class GetAllReviewsUseCase(private val repository: ReviewRepository) {
     operator fun invoke(): Flow<List<Review>> = repository.getAll()
+
+    suspend fun refresh() = repository.refreshAll()
 }

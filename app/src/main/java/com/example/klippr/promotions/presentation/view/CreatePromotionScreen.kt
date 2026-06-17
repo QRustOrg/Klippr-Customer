@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.klippr.promotions.domain.model.PromotionCategory
+import com.example.klippr.ui.theme.KlipprTextGray
 import java.util.UUID
 
 // @author Samuel Bonifacio
@@ -73,7 +74,7 @@ private val KlipprPurple = Color(0xFF887BF3)
 private val KlipprLavender = Color(0xFFF0D8FF)
 private val DashColor = Color(0xFFCCAEFF)
 private val ErrorRed = Color(0xFFE53935)
-private val TextGray = Color(0xFF888888)
+private val TextGray = KlipprTextGray
 
 // ── Local types ──────────────────────────────────────────────────────────────
 

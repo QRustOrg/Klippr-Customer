@@ -46,12 +46,6 @@ fun KlipprBottomBar(
 
     NavigationBar(containerColor = Color.White, tonalElevation = 4.dp) {
         NavigationBarItem(
-            selected = current == KlipprTab.COMUNIDAD, onClick = onComunidad,
-            icon = { Icon(Icons.Default.Group, contentDescription = "Comunidad") },
-            label = { Text("Comunidad", fontSize = 10.sp) },
-            colors = itemColors,
-        )
-        NavigationBarItem(
             selected = current == KlipprTab.INICIO, onClick = onInicio,
             icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
             label = { Text("Inicio", fontSize = 10.sp) },
@@ -67,6 +61,12 @@ fun KlipprBottomBar(
             selected = current == KlipprTab.PROMOS, onClick = onPromos,
             icon = { Icon(Icons.Default.Apps, contentDescription = "Promos") },
             label = { Text("Promos", fontSize = 10.sp) },
+            colors = itemColors,
+        )
+        NavigationBarItem(
+            selected = current == KlipprTab.COMUNIDAD, onClick = onComunidad,
+            icon = { Icon(Icons.Default.Group, contentDescription = "Comunidad") },
+            label = { Text("Comunidad", fontSize = 10.sp) },
             colors = itemColors,
         )
     }

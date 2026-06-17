@@ -22,18 +22,18 @@ fun PromotionDto.toEntity(isFavorite: Boolean = false): PromotionEntity = Promot
     status               = status.toKotlinPromotionStatus().name,
     imageUrl             = null,
     imageKey             = imageKey,
-    termsAndConditions   = null,
+    termsAndConditions   = termsAndConditions?.takeIf { it.isNotBlank() },
     availableRedemptions = redemptionCap ?: Int.MAX_VALUE,
-    currentRedemptions   = 0,
+    currentRedemptions   = currentRedemptions ?: 0,
     startDate            = startDate.toInstantFlexible(),
     endDate              = endDate.toInstantFlexible(),
     createdAt            = createdAt.toInstantFlexible(),
     updatedAt            = updatedAt.takeIf { it.isNotBlank() }?.toInstantFlexible(),
     isFavorite           = isFavorite,
-    category             = PromotionCategory.OTHER.name,
-    locationName         = null,
-    businessName         = null,
-    rating               = null,
+    category             = (category.toKotlinPromotionCategoryOrNull() ?: imageKey.toCategoryFromImageKey()).name,
+    locationName         = locationName?.takeIf { it.isNotBlank() },
+    businessName         = businessName?.takeIf { it.isNotBlank() },
+    rating               = rating,
 )
 
 // El backend envía timestamps sin zona horaria ("2026-06-15T14:54:57.654618"), que Instant.parse
@@ -108,4 +108,31 @@ private fun String.toKotlinPromotionStatus(): PromotionStatus = when (trim().low
     "expired"   -> PromotionStatus.EXPIRED
     "cancelled" -> PromotionStatus.CANCELLED
     else        -> PromotionStatus.DRAFT
+}
+
+private fun String?.toKotlinPromotionCategoryOrNull(): PromotionCategory? = when (
+    this?.trim()?.replace(Regex("[_\\-\\s]"), "")?.lowercase()
+) {
+    "food", "comida" -> PromotionCategory.FOOD
+    "beauty", "belleza" -> PromotionCategory.BEAUTY
+    "health", "salud" -> PromotionCategory.HEALTH
+    "education", "educacion", "educación" -> PromotionCategory.EDUCATION
+    "entertainment", "entretenimiento" -> PromotionCategory.ENTERTAINMENT
+    "sports", "deportes" -> PromotionCategory.SPORTS
+    "services", "servicios" -> PromotionCategory.SERVICES
+    "technology", "tecnologia", "tecnología" -> PromotionCategory.TECHNOLOGY
+    "other", "otros" -> PromotionCategory.OTHER
+    else -> null
+}
+
+private fun String?.toCategoryFromImageKey(): PromotionCategory {
+    val key = this?.lowercase().orEmpty()
+    return when {
+    key.isBlank() -> PromotionCategory.OTHER
+    key.startsWith("comida_") -> PromotionCategory.FOOD
+    key.startsWith("salud_") -> PromotionCategory.HEALTH
+    key.startsWith("entretenimiento_") -> PromotionCategory.ENTERTAINMENT
+    key.startsWith("deportes_") -> PromotionCategory.SPORTS
+    else -> PromotionCategory.OTHER
+    }
 }

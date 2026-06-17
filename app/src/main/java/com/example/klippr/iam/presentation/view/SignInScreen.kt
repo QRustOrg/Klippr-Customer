@@ -69,7 +69,7 @@ fun SignInScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var rememberMe by remember { mutableStateOf(false) }
+    var rememberMe by remember { mutableStateOf(true) }
 
     LaunchedEffect(state.isAuthenticated) {
         if (state.isAuthenticated) onSignedIn()

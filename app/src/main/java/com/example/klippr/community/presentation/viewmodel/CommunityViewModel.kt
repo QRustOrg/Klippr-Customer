@@ -32,6 +32,7 @@ class CommunityViewModel(
     private fun loadReviews() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            getAllReviewsUseCase.refresh()
             getAllReviewsUseCase()
                 .catch { e ->
                     _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }

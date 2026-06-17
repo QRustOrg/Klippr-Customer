@@ -54,6 +54,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
+import com.example.klippr.shared.presentation.component.DiscountBadge
+import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 
 // @author Samuel Bonifacio
 

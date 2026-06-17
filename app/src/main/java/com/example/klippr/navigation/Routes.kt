@@ -14,6 +14,7 @@ object Routes {
     const val PROFILE = "profile"
     const val EXPLORE = "explore"
     const val MIS_PROMOS = "mis_promos"
+    const val MIS_PROMOS_WITH_TAB = "mis_promos?tab={tab}"
 
     const val COMMUNITY = "community"
 
@@ -25,7 +26,11 @@ object Routes {
     fun promotionDetail(promotionId: String) = "promotion_detail/$promotionId"
     fun qrCode(redemptionId: String) = "qr_code/$redemptionId"
     fun redemptionSuccess(redemptionId: String) = "redemption_success/$redemptionId"
+    fun misPromos(tab: String) = "mis_promos?tab=$tab"
 
     const val ARG_PROMOTION_ID = "promotionId"
     const val ARG_REDEMPTION_ID = "redemptionId"
+    const val ARG_TAB = "tab"
+    const val TAB_FAVORITES = "favorites"
+    const val TAB_CODES = "codes"
 }
