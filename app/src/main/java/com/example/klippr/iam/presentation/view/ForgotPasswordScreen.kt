@@ -1,6 +1,5 @@
 package com.example.klippr.iam.presentation.view
 
-import com.example.klippr.shared.presentation.component.KlipprField
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,34 +36,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
+import com.example.klippr.shared.presentation.component.KlipprField
 
 // @author Samuel Bonifacio
 
-/*
- * Colors defined in AuthColors.kt (ScreenBg, ButtonPurple, TextDark).
- */
-
-/**
- * Paso 1 del flujo "olvidé mi contraseña": el usuario ingresa su email.
- * viewModel.verifyEmail() valida contra el backend; al verificarse (state.emailVerified)
- * navega a la pantalla de reset (ResetPasswordScreen).
- */
 @Composable
 fun ForgotPasswordScreen(
     viewModel: AuthViewModel,
-    onEmailVerified: () -> Unit,
     onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var email by remember { mutableStateOf("") }
-
-    LaunchedEffect(state.emailVerified) {
-        if (state.emailVerified) {
-            onEmailVerified()
-            viewModel.consumeResetFlags()
-        }
-    }
 
     Box(modifier = modifier.fillMaxSize().background(ScreenBg)) {
         Column(
@@ -85,33 +67,65 @@ fun ForgotPasswordScreen(
                 color = TextDark,
             )
 
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(32.dp))
 
-            KlipprField(
-                value = email,
-                onValueChange = { email = it },
-                label = "Email",
-                keyboardType = KeyboardType.Email,
-            )
+            if (state.passwordRecoverySent) {
+                Text(
+                    text = "If the email exists, we sent a recovery link. Check your inbox and follow the link to continue.",
+                    color = TextDark,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                )
 
-            if (state.error != null) {
-                Spacer(Modifier.height(10.dp))
-                Text(state.error!!, color = Color(0xFFD32F2F), fontSize = 13.sp)
-            }
+                Spacer(Modifier.height(32.dp))
 
-            Spacer(Modifier.height(40.dp))
+                Button(
+                    onClick = {
+                        viewModel.consumeResetFlags()
+                        onBack()
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = ButtonPurple),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                ) {
+                    Text("Back to sign in", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Color.White)
+                }
+            } else {
+                Text(
+                    text = "Enter your email and we will send you a recovery link.",
+                    color = TextDark,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                )
 
-            Button(
-                onClick = { viewModel.verifyEmail(email) },
-                enabled = !state.isLoading,
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = ButtonPurple),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
-                } else {
-                    Text("Recover password", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Color.White)
+                Spacer(Modifier.height(24.dp))
+
+                KlipprField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = "Email",
+                    keyboardType = KeyboardType.Email,
+                )
+
+                if (state.error != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(state.error!!, color = Color(0xFFD32F2F), fontSize = 13.sp)
+                }
+
+                Spacer(Modifier.height(40.dp))
+
+                Button(
+                    onClick = { viewModel.requestPasswordRecovery(email) },
+                    enabled = !state.isLoading,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = ButtonPurple),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp))
+                    } else {
+                        Text("Send recovery link", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Color.White)
+                    }
                 }
             }
 
@@ -119,7 +133,10 @@ fun ForgotPasswordScreen(
         }
 
         IconButton(
-            onClick = onBack,
+            onClick = {
+                viewModel.consumeResetFlags()
+                onBack()
+            },
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .statusBarsPadding()

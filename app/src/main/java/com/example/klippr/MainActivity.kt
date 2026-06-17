@@ -24,11 +24,11 @@ import com.example.klippr.favorites.domain.usecase.SaveFavoriteUseCase
 import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.iam.data.repository.AuthRepositoryImpl
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
+import com.example.klippr.iam.domain.usecase.RequestPasswordRecoveryUseCase
 import com.example.klippr.iam.domain.usecase.ResetPasswordUseCase
 import com.example.klippr.iam.domain.usecase.SignInUseCase
 import com.example.klippr.iam.domain.usecase.SignOutUseCase
 import com.example.klippr.iam.domain.usecase.SignUpConsumerUseCase
-import com.example.klippr.iam.domain.usecase.VerifyEmailUseCase
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.navigation.AppNavGraph
 import com.example.klippr.profile.data.repository.ProfileRepositoryImpl
@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
                 signUpConsumerUseCase = SignUpConsumerUseCase(authRepository),
                 getCurrentUserUseCase = GetCurrentUserUseCase(authRepository),
                 signOutUseCase        = SignOutUseCase(authRepository),
-                verifyEmailUseCase    = VerifyEmailUseCase(authRepository),
+                requestPasswordRecoveryUseCase = RequestPasswordRecoveryUseCase(authRepository),
                 resetPasswordUseCase  = ResetPasswordUseCase(authRepository),
             ) as T
         }

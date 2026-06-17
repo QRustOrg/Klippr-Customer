@@ -194,6 +194,13 @@ fun ExploreScreen(
             .sorted()
     }
 
+    LaunchedEffect(availableLocations, filterState.selectedLocation) {
+        val selectedLocation = filterState.selectedLocation
+        if (selectedLocation != null && selectedLocation !in availableLocations) {
+            filterState = filterState.copy(selectedLocation = null)
+        }
+    }
+
     val groupedPromos = remember(filteredPromos) { filteredPromos.groupBy { it.category } }
     val sections = remember(groupedPromos) {
         PromotionCategory.entries.filter { groupedPromos.containsKey(it) }
@@ -684,7 +691,12 @@ private fun FilterPanel(
                 isActive = filterState.selectedLocation != null,
                 badge = filterState.selectedLocation,
                 isExpanded = isLocationExpanded,
-                onClick = { isLocationExpanded = !isLocationExpanded },
+                enabled = availableLocations.isNotEmpty(),
+                onClick = {
+                    if (availableLocations.isNotEmpty()) {
+                        isLocationExpanded = !isLocationExpanded
+                    }
+                },
             )
             AnimatedVisibility(visible = isLocationExpanded) {
                 FilterOptionsColumn {
@@ -725,28 +737,35 @@ private fun FilterRow(
     isActive: Boolean,
     badge: String?,
     isExpanded: Boolean? = null,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
+        val rowColor = when {
+            !enabled -> TextSecondary.copy(alpha = 0.55f)
+            isActive -> KlipprPurple
+            else -> TextPrimary
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 fontSize = 15.sp,
-                color = if (isActive) KlipprPurple else TextPrimary,
+                color = rowColor,
                 fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
             )
-            if (badge != null) {
+            val helperText = badge ?: if (!enabled) "No disponible" else null
+            if (helperText != null) {
                 Text(
-                    text = badge,
+                    text = helperText,
                     fontSize = 11.sp,
-                    color = KlipprPurple,
+                    color = if (enabled) KlipprPurple else TextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -757,7 +776,7 @@ private fun FilterRow(
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = if (isActive) KlipprPurple else TextSecondary,
+                    tint = if (!enabled) TextSecondary.copy(alpha = 0.55f) else if (isActive) KlipprPurple else TextSecondary,
                     modifier = Modifier.size(20.dp),
                 )
             }

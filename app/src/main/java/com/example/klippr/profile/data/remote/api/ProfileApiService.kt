@@ -8,7 +8,7 @@ import retrofit2.http.Path
 /** Contrato Retrofit para datos de usuario/perfil. Requiere Bearer (lo añade el AuthInterceptor). */
 interface ProfileApiService {
 
-    /** Perfil del consumer actual por id. Endpoint correcto para role=consumer. */
-    @GET("api/profiles/consumer/{userId}")
+    /** Datos del usuario autenticado (UserResource). El consumer endpoint 404ea; este sí devuelve firstName. */
+    @GET("api/Users/{userId}")
     suspend fun getUser(@Path("userId") userId: String): UserDto
 }

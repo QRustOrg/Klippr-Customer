@@ -13,7 +13,11 @@ import java.io.IOException
 class ApiException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 /** Cuerpo de error estándar del backend: `{ "message": "..." }`. */
-private data class ErrorResponseDto(val message: String?)
+private data class ErrorResponseDto(
+    val message: String?,
+    val detail: String?,
+    val title: String?,
+)
 
 private val gson = Gson()
 
@@ -28,7 +32,12 @@ suspend fun <T> safeApiCall(block: suspend () -> T): T =
         block()
     } catch (e: HttpException) {
         val backendMessage = e.response()?.errorBody()?.string()
-            ?.let { runCatching { gson.fromJson(it, ErrorResponseDto::class.java)?.message }.getOrNull() }
+            ?.let {
+                runCatching {
+                    gson.fromJson(it, ErrorResponseDto::class.java)
+                        ?.let { dto -> dto.message ?: dto.detail ?: dto.title }
+                }.getOrNull()
+            }
             ?.takeIf { it.isNotBlank() }
         throw ApiException(backendMessage ?: "Error ${e.code()}", e)
     } catch (e: IOException) {

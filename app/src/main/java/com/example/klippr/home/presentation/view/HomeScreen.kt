@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -65,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.klippr.R
 import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
@@ -473,10 +473,15 @@ private fun HomeTopBar(name: String, onBell: () -> Unit, onSettings: () -> Unit)
             modifier = Modifier
                 .size(46.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFFFC93C)),
+                .background(Color.White),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.Person, contentDescription = "Avatar", tint = Color.White, modifier = Modifier.size(30.dp))
+            Image(
+                painter = painterResource(R.drawable.klippr_lockup),
+                contentDescription = "Klippr",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().padding(4.dp),
+            )
         }
         Spacer(Modifier.width(12.dp))
         Text(

@@ -119,9 +119,8 @@ fun AppNavGraph(
 
         composable(Routes.FORGOT_PASSWORD) {
             ForgotPasswordScreen(
-                viewModel       = authViewModel,
-                onEmailVerified = { navController.navigate(Routes.RESET_PASSWORD) },
-                onBack          = { navController.popBackStack() },
+                viewModel = authViewModel,
+                onBack    = { navController.popBackStack() },
             )
         }
 

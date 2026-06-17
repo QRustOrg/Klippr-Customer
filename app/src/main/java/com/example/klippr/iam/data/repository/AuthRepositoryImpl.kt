@@ -42,8 +42,8 @@ class AuthRepositoryImpl(
         return signIn(email, password)
     }
 
-    override suspend fun verifyEmail(email: String) {
-        // forgot-password devuelve 2xx si el email existe; safeApiCall traduce el 404 a ApiException.
+    override suspend fun requestPasswordRecovery(email: String) {
+        // forgot-password solicita al backend que envie el enlace de recuperacion por correo.
         safeApiCall { api.forgotPassword(ForgotPasswordRequestDto(email = email)) }
     }
 

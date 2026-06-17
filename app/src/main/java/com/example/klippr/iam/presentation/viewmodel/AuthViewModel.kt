@@ -3,11 +3,11 @@ package com.example.klippr.iam.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
+import com.example.klippr.iam.domain.usecase.RequestPasswordRecoveryUseCase
 import com.example.klippr.iam.domain.usecase.ResetPasswordUseCase
 import com.example.klippr.iam.domain.usecase.SignInUseCase
 import com.example.klippr.iam.domain.usecase.SignOutUseCase
 import com.example.klippr.iam.domain.usecase.SignUpConsumerUseCase
-import com.example.klippr.iam.domain.usecase.VerifyEmailUseCase
 import com.example.klippr.iam.presentation.state.AuthUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +22,7 @@ class AuthViewModel(
     private val signUpConsumerUseCase: SignUpConsumerUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val signOutUseCase: SignOutUseCase,
-    private val verifyEmailUseCase: VerifyEmailUseCase,
+    private val requestPasswordRecoveryUseCase: RequestPasswordRecoveryUseCase,
     private val resetPasswordUseCase: ResetPasswordUseCase,
 ) : ViewModel() {
 
@@ -79,8 +79,8 @@ class AuthViewModel(
         }
     }
 
-    /** Paso 1 "olvidé mi contraseña": valida el email contra el backend. */
-    fun verifyEmail(email: String) {
+    /** Paso 1 "olvide mi contrasena": solicita al backend enviar el enlace por correo. */
+    fun requestPasswordRecovery(email: String) {
         if (email.isBlank()) {
             _state.update { it.copy(error = "Ingresa tu email") }
             return
@@ -88,10 +88,16 @@ class AuthViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
-                verifyEmailUseCase(email)
-                _state.update { it.copy(isLoading = false, emailVerified = true, forgotEmail = email.trim()) }
+                requestPasswordRecoveryUseCase(email)
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        passwordRecoverySent = true,
+                        forgotEmail = email.trim(),
+                    )
+                }
             } catch (e: Exception) {
-                _state.update { it.copy(isLoading = false, error = e.message ?: "No encontramos ese email") }
+                _state.update { it.copy(isLoading = false, error = e.message ?: "No se pudo solicitar la recuperacion") }
             }
         }
     }
@@ -117,7 +123,9 @@ class AuthViewModel(
     }
 
     /** Limpia los flags del flujo de recuperación tras navegar (conserva [AuthUiState.forgotEmail]). */
-    fun consumeResetFlags() = _state.update { it.copy(emailVerified = false, resetSuccess = false, error = null) }
+    fun consumeResetFlags() = _state.update {
+        it.copy(passwordRecoverySent = false, resetSuccess = false, error = null)
+    }
 
     fun consumeError() = _state.update { it.copy(error = null) }
 }

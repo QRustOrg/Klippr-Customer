@@ -9,8 +9,8 @@ data class AuthUiState(
     val user: User? = null,
     val error: String? = null,
     // Flujo "olvidé mi contraseña":
-    val forgotEmail: String? = null,   // email validado, se conserva entre las dos pantallas
-    val emailVerified: Boolean = false, // gatilla navegación a la pantalla de reset
+    val forgotEmail: String? = null,   // email usado para solicitar recuperacion
+    val passwordRecoverySent: Boolean = false, // confirma que el backend acepto enviar el enlace
     val resetSuccess: Boolean = false,  // gatilla volver a SignIn tras cambiar la contraseña
 ) {
     val isAuthenticated: Boolean get() = user != null
