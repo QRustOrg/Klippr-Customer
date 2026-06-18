@@ -1,5 +1,7 @@
 package com.example.klippr.promotions.presentation.view
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,30 +13,34 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import android.content.Intent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,256 +52,584 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.klippr.promotions.domain.model.Promotion
+import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.util.formatVence
-import com.example.klippr.shared.presentation.component.DiscountBadge
+import com.example.klippr.shared.presentation.component.discountLabel
 import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
+import com.example.klippr.ui.theme.KlipprCardPink
+import com.example.klippr.ui.theme.KlipprPurple
+import com.example.klippr.ui.theme.KlipprTextDark
+import com.example.klippr.ui.theme.KlipprTextGray
 
 // @author Samuel Bonifacio
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PromotionDetailScreen(
     promotionId: String,
     viewModel: PromotionViewModel,
     onBack: () -> Unit,
     onApplyDiscount: (Promotion) -> Unit,
+    onNavigateToReviews: (promotionId: String) -> Unit = { _ -> },
+    isGenerating: Boolean = false,
+    errorMessage: String? = null,
     onToggleFavorite: (promotionId: String, isFavorite: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.detailState.collectAsStateWithLifecycle()
+    val businessNames by viewModel.businessNames.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(promotionId) { viewModel.loadDetail(promotionId) }
+    LaunchedEffect(state.promotion?.businessId) {
+        state.promotion?.businessId?.let(viewModel::loadBusinessName)
+    }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
-                    }
-                },
-                actions = {
-                    state.promotion?.let { promo ->
-                        IconButton(onClick = {
-                            val send = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, "${promo.title}\n${promo.description}")
-                            }
-                            context.startActivity(Intent.createChooser(send, "Compartir"))
-                        }) {
-                            Icon(Icons.Filled.Share, contentDescription = "Compartir", tint = Color.White)
-                        }
-                        IconButton(onClick = {
-                            viewModel.toggleFavorite(promo.id, !promo.isFavorite)
-                            onToggleFavorite(promo.id, !promo.isFavorite)
-                        }) {
-                            Icon(
-                                imageVector = if (promo.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = "Favorito",
-                                tint = Color.White,
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-            )
-        },
-        modifier = modifier,
-    ) { innerPadding ->
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.White),
+    ) {
         when {
-            state.isLoading -> Box(
-                Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) }
+            state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = KlipprPurple)
+            }
 
-            state.error != null -> Box(
-                Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { Text(state.error!!, color = Color.Gray) }
+            state.error != null -> ErrorState(message = state.error.orEmpty(), onBack = onBack)
 
-            state.promotion != null -> PromotionDetailContent(
-                promotion = state.promotion!!,
-                onApplyDiscount = onApplyDiscount,
-                topPadding = innerPadding.calculateTopPadding(),
-            )
+            state.promotion != null -> {
+                val promotion = state.promotion!!
+                val businessDisplayName = promotion.businessName?.takeIf { it.isNotBlank() }
+                    ?: businessNames[promotion.businessId]?.takeIf { it.isNotBlank() }
+                    ?: "Negocio no disponible"
+
+                PromotionDetailContent(
+                    promotion = promotion,
+                    businessDisplayName = businessDisplayName,
+                    isGenerating = isGenerating,
+                    errorMessage = errorMessage,
+                    onApplyDiscount = onApplyDiscount,
+                    onBack = onBack,
+                    isFavorite = promotion.isFavorite,
+                    onShare = { sharePromotion(context, promotion, businessDisplayName) },
+                    onToggleFavorite = {
+                        val nextValue = !promotion.isFavorite
+                        viewModel.toggleFavorite(promotion.id, nextValue)
+                        onToggleFavorite(promotion.id, nextValue)
+                    },
+                    onNavigateToReviews = { onNavigateToReviews(promotion.id) },
+                )
+            }
         }
     }
 }
-
 
 @Composable
 private fun PromotionDetailContent(
     promotion: Promotion,
+    businessDisplayName: String,
+    isGenerating: Boolean,
+    errorMessage: String?,
     onApplyDiscount: (Promotion) -> Unit,
-    topPadding: androidx.compose.ui.unit.Dp,
+    onBack: () -> Unit,
+    isFavorite: Boolean,
+    onShare: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onNavigateToReviews: () -> Unit,
 ) {
-    var termsExpanded by remember { mutableStateOf(false) }
+    var accepted by remember(promotion.id) { mutableStateOf(false) }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 96.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp),
+            ) {
+                PromotionHeroImage(promotion)
+                TopActions(
+                    isFavorite = isFavorite,
+                    onBack = onBack,
+                    onShare = onShare,
+                    onToggleFavorite = onToggleFavorite,
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .background(Color.White)
+                    .padding(start = 22.dp, top = 24.dp, end = 22.dp, bottom = 24.dp),
+            ) {
+                Text(
+                    text = businessDisplayName,
+                    color = KlipprPurple,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = promotion.title,
+                    color = KlipprTextDark,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp,
+                    lineHeight = 34.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = buildSubtitle(promotion.category, promotion.locationName, promotion.description),
+                    color = KlipprTextGray,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                promotion.rating?.let { rating ->
+                    Spacer(Modifier.height(16.dp))
+                    RatingAndReviews(
+                        rating = rating,
+                        onNavigateToReviews = onNavigateToReviews,
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = KlipprPurple.copy(alpha = 0.35f), thickness = 1.dp)
+                Spacer(Modifier.height(16.dp))
+
+                BusinessSection(
+                    businessDisplayName = businessDisplayName,
+                    category = promotion.category,
+                    location = promotion.locationName,
+                )
+
+                val remaining = (promotion.availableRedemptions - promotion.currentRedemptions).coerceAtLeast(0)
+                if (remaining in 1..9) {
+                    Spacer(Modifier.height(16.dp))
+                    UrgencyBanner(remaining = remaining)
+                }
+
+                Spacer(Modifier.height(18.dp))
+                DetailInfoLine("Negocio:", businessDisplayName)
+                Spacer(Modifier.height(10.dp))
+                DetailInfoLine("Cantidad:", redemptionsLabel(promotion))
+                Spacer(Modifier.height(10.dp))
+                DetailInfoLine("Vigencia:", "Hasta el ${formatVence(promotion.endDate)}")
+
+                promotion.termsAndConditions?.takeIf { it.isNotBlank() }?.let { terms ->
+                    Spacer(Modifier.height(10.dp))
+                    DetailInfoLine("Condiciones:", terms)
+                }
+
+                promotion.locationName?.takeIf { it.isNotBlank() }?.let { location ->
+                    Spacer(Modifier.height(10.dp))
+                    DetailInfoLine("Lugar:", location)
+                }
+
+                Spacer(Modifier.height(20.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { accepted = !accepted },
+                ) {
+                    Checkbox(
+                        checked = accepted,
+                        onCheckedChange = { accepted = it },
+                        colors = CheckboxDefaults.colors(checkedColor = KlipprPurple),
+                    )
+                    Text("Acepto los ", fontSize = 14.sp, color = KlipprTextDark)
+                    Text(
+                        text = "terminos y condiciones",
+                        fontSize = 14.sp,
+                        color = KlipprPurple,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+
+                if (errorMessage != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = errorMessage,
+                        color = Color(0xFFD3503F),
+                        fontSize = 13.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
+
+        BottomActionBar(
+            discountLabel = discountLabel(promotion.discountType, promotion.discountValue),
+            enabled = accepted && !isGenerating,
+            isGenerating = isGenerating,
+            onApplyDiscount = { onApplyDiscount(promotion) },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+@Composable
+private fun PromotionHeroImage(promotion: Promotion) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(400.dp)
+            .background(Color(0xFFE8E8E8)),
+    ) {
+        val resId = rememberPromoDrawableId(promotion.imageKey)
+        if (resId != 0) {
+            Image(
+                painter = painterResource(resId),
+                contentDescription = promotion.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            AsyncImage(
+                model = promotion.imageUrl,
+                contentDescription = promotion.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TopActions(
+    isFavorite: Boolean,
+    onBack: () -> Unit,
+    onShare: () -> Unit,
+    onToggleFavorite: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FloatingIconButton(onClick = onBack) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Volver",
+                tint = KlipprTextDark,
+            )
+        }
+        Row {
+            FloatingIconButton(onClick = onShare) {
+                Icon(
+                    Icons.Filled.Share,
+                    contentDescription = "Compartir",
+                    tint = KlipprTextDark,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            FloatingIconButton(onClick = onToggleFavorite) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = if (isFavorite) "Quitar favorito" else "Agregar favorito",
+                    tint = if (isFavorite) KlipprPurple else KlipprTextDark,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FloatingIconButton(
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.92f)),
+        content = content,
+    )
+}
+
+@Composable
+private fun BusinessSection(
+    businessDisplayName: String,
+    category: PromotionCategory,
+    location: String?,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BusinessAvatar(name = businessDisplayName)
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(
+                text = "Promoción de $businessDisplayName",
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
+                color = KlipprTextDark,
+            )
+            Text(
+                text = listOfNotNull(
+                    categoryLabel(category),
+                    location?.takeIf { it.isNotBlank() },
+                ).joinToString(" · "),
+                fontSize = 14.sp,
+                color = KlipprTextGray,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BusinessAvatar(name: String) {
+    val initial = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(KlipprPurple),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = initial,
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun RatingAndReviews(
+    rating: Double,
+    onNavigateToReviews: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = String.format("%.1f", rating),
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            color = KlipprTextDark,
+        )
+        Spacer(Modifier.width(6.dp))
+        StarRatingDisplay(rating = rating.toInt())
+        Spacer(Modifier.width(12.dp))
+        TextButton(onClick = onNavigateToReviews) {
+            Text(
+                text = "Ver reseñas",
+                color = KlipprPurple,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StarRatingDisplay(rating: Int) {
+    Row {
+        (1..5).forEach { i ->
+            Icon(
+                imageVector = if (i <= rating) Icons.Filled.Star else Icons.Filled.StarBorder,
+                contentDescription = null,
+                tint = if (i <= rating) Color(0xFFFFC107) else Color.LightGray,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun UrgencyBanner(remaining: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(KlipprCardPink)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Star,
+            contentDescription = null,
+            tint = KlipprPurple,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = if (remaining == 1) "¡Última unidad! Solo queda 1 canje" else "¡Últimas unidades! Solo quedan $remaining canjes",
+            color = KlipprTextDark,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun BottomActionBar(
+    discountLabel: String,
+    enabled: Boolean,
+    isGenerating: Boolean,
+    onApplyDiscount: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = Color.White,
+        tonalElevation = 8.dp,
+        shadowElevation = 8.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .navigationBarsPadding(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column {
+                Text(
+                    text = discountLabel,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    color = KlipprTextDark,
+                )
+                Text(
+                    text = "Descuento",
+                    fontSize = 12.sp,
+                    color = KlipprTextGray,
+                )
+            }
+            Button(
+                onClick = onApplyDiscount,
+                enabled = enabled,
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = KlipprPurple,
+                    disabledContainerColor = Color(0xFFCFC6E8),
+                ),
+                modifier = Modifier
+                    .height(52.dp)
+                    .width(180.dp),
+            ) {
+                if (isGenerating) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp),
+                    )
+                } else {
+                    Text("Generar QR", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailInfoLine(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            color = KlipprTextDark,
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = value,
+            fontSize = 15.sp,
+            color = KlipprTextDark,
+            lineHeight = 20.sp,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun ErrorState(message: String, onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
+            .statusBarsPadding()
+            .padding(20.dp),
     ) {
-        // Hero image (extends behind top bar)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(260.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            val resId = rememberPromoDrawableId(promotion.imageKey)
-            if (resId != 0) {
-                Image(
-                    painter = painterResource(resId),
-                    contentDescription = promotion.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                AsyncImage(
-                    model = promotion.imageUrl,
-                    contentDescription = promotion.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+        FloatingIconButton(onClick = onBack) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Volver",
+                tint = KlipprTextDark,
+            )
         }
-
-        // Info card
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                .background(Color.White)
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-        ) {
-            // Business name + rating
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = promotion.businessName ?: "",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.Gray,
-                )
-                promotion.rating?.let { r ->
-                    Text("⭐ ${"%.1f".format(r)}", style = MaterialTheme.typography.labelMedium)
-                }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            // Title
-            Text(
-                text = promotion.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-
-            Spacer(Modifier.height(10.dp))
-
-            // Discount badge
-            DiscountBadge(value = promotion.discountValue, type = promotion.discountType)
-
-            Spacer(Modifier.height(16.dp))
-
-            // Description
-            Text(
-                text = promotion.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.DarkGray,
-                lineHeight = 22.sp,
-            )
-
-            // Terms and conditions (expandable)
-            promotion.termsAndConditions?.let { terms ->
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = if (termsExpanded) "▲ Ocultar términos y condiciones"
-                           else "▼ Ver términos y condiciones",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { termsExpanded = !termsExpanded },
-                )
-                if (termsExpanded) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(terms, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                }
-            }
-
-            Spacer(Modifier.height(20.dp))
-            HorizontalDivider(color = Color.LightGray)
-            Spacer(Modifier.height(12.dp))
-
-            // Redemptions counter
-            RedemptionsInfo(
-                available = promotion.availableRedemptions,
-                current = promotion.currentRedemptions,
-            )
-
-            // Validity
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "📅 Vigente hasta ${formatVence(promotion.endDate)}",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.Gray,
-            )
-
-            // Location
-            promotion.locationName?.let { location ->
-                Spacer(Modifier.height(8.dp))
-                Text("📍 $location", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-            }
-
-            Spacer(Modifier.height(28.dp))
-
-            // CTA button
-            Button(
-                onClick = { onApplyDiscount(promotion) },
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-            ) {
-                Text("Aplicar Descuento", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-
-            Spacer(Modifier.height(16.dp))
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(message, color = KlipprTextGray, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
 
-
-@Composable
-private fun RedemptionsInfo(available: Int, current: Int) {
-    val remaining = (available - current).coerceAtLeast(0)
-    val isUnlimited = available == Int.MAX_VALUE
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = Icons.Filled.FavoriteBorder,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(16.dp),
-        )
-        Text(
-            text = if (isUnlimited) "  Canjes ilimitados disponibles"
-                   else "  $remaining canjes disponibles",
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.Gray,
-        )
-    }
+private fun categoryLabel(category: PromotionCategory): String = when (category) {
+    PromotionCategory.FOOD -> "Comida"
+    PromotionCategory.BEAUTY -> "Belleza"
+    PromotionCategory.HEALTH -> "Salud"
+    PromotionCategory.EDUCATION -> "Educación"
+    PromotionCategory.ENTERTAINMENT -> "Entretenimiento"
+    PromotionCategory.SPORTS -> "Deportes"
+    PromotionCategory.SERVICES -> "Servicios"
+    PromotionCategory.TECHNOLOGY -> "Tecnología"
+    PromotionCategory.OTHER -> "Otros"
 }
 
+private fun buildSubtitle(category: PromotionCategory, location: String?, description: String): String {
+    return listOfNotNull(
+        categoryLabel(category),
+        location?.takeIf { it.isNotBlank() },
+        description,
+    ).joinToString(" · ")
+}
+
+private fun redemptionsLabel(promotion: Promotion): String {
+    if (promotion.availableRedemptions == Int.MAX_VALUE) return "Canjes ilimitados disponibles"
+    val remaining = (promotion.availableRedemptions - promotion.currentRedemptions).coerceAtLeast(0)
+    return "$remaining disponibles"
+}
+
+private fun sharePromotion(context: Context, promotion: Promotion, businessDisplayName: String) {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(
+            Intent.EXTRA_TEXT,
+            "$businessDisplayName\n${promotion.title}\n${promotion.description}",
+        )
+    }
+    context.startActivity(Intent.createChooser(send, "Compartir"))
+}

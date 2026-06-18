@@ -42,11 +42,16 @@ private val LikePink        = Color(0xFFE91E63)
 fun CommunityScreen(
     viewModel: CommunityViewModel,
     currentUserId: String = "current_user",
+    promotionId: String? = null,
     onNavigateHome: () -> Unit = {},
     onNavigatePromos: () -> Unit = {},
     onNavigateMisPromos: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(promotionId) {
+        viewModel.setPromotionFilter(promotionId)
+    }
 
     if (uiState.isReviewSheetOpen) {
         ReviewBottomSheet(
@@ -77,7 +82,7 @@ fun CommunityScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "Comunidad",
+                        text = if (promotionId != null) "Reseñas" else "Comunidad",
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         fontSize = 24.sp
@@ -119,6 +124,7 @@ fun CommunityScreen(
                     ReviewFeed(
                         reviews = uiState.reviews,
                         commentsByReviewId = uiState.commentsByReviewId,
+                        promotionId = promotionId,
                         onLike = { reviewId -> viewModel.toggleLike(reviewId) },
                         onComment = viewModel::openCommentSheet,
                     )
@@ -146,6 +152,7 @@ fun CommunityScreen(
 private fun ReviewFeed(
     reviews: List<Review>,
     commentsByReviewId: Map<String, List<ReviewComment>>,
+    promotionId: String?,
     onLike: (String) -> Unit,
     onComment: (Review) -> Unit,
 ) {
@@ -155,7 +162,7 @@ private fun ReviewFeed(
     ) {
         item {
             Text(
-                text = "Lo que dice la comunidad",
+                text = if (promotionId != null) "Reseñas de esta promoción" else "Lo que dice la comunidad",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = KlipprPurple,

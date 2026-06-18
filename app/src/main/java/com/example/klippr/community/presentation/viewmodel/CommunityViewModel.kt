@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,8 @@ class CommunityViewModel(
     private val _uiState = MutableStateFlow(CommunityUiState())
     val uiState: StateFlow<CommunityUiState> = _uiState.asStateFlow()
 
+    private val _promotionIdFilter = MutableStateFlow<String?>(null)
+
     init {
         loadReviews()
     }
@@ -38,7 +41,12 @@ class CommunityViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             getAllReviewsUseCase.refresh()
-            getAllReviewsUseCase()
+            combine(
+                getAllReviewsUseCase(),
+                _promotionIdFilter,
+            ) { reviews, filter ->
+                if (filter == null) reviews else reviews.filter { review -> review.promotionId == filter }
+            }
                 .catch { e ->
                     _uiState.update { it.copy(isLoading = false, errorMessage = e.message) }
                 }
@@ -46,6 +54,10 @@ class CommunityViewModel(
                     _uiState.update { it.copy(isLoading = false, reviews = reviews) }
                 }
         }
+    }
+
+    fun setPromotionFilter(promotionId: String?) {
+        _promotionIdFilter.value = promotionId
     }
 
     // Abre el sheet verificando con el API si el usuario puede reseñar (desde CommunityScreen)

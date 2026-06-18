@@ -227,13 +227,15 @@ fun PromotionCard(
 
             // Info
             Column(modifier = Modifier.weight(1f)) {
-                promotion.businessName?.let { name ->
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray,
-                    )
-                }
+                Text(
+                    text = "Negocio: ${promotion.businessName?.takeIf { it.isNotBlank() } ?: "No disponible"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = promotion.title,
                     style = MaterialTheme.typography.titleSmall,

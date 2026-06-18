@@ -27,6 +27,8 @@ object Routes {
     fun qrCode(redemptionId: String) = "qr_code/$redemptionId"
     fun redemptionSuccess(redemptionId: String) = "redemption_success/$redemptionId"
     fun misPromos(tab: String) = "mis_promos?tab=$tab"
+    fun community(promotionId: String? = null) =
+        if (promotionId != null) "community?promotionId=$promotionId" else "community"
 
     const val ARG_PROMOTION_ID = "promotionId"
     const val ARG_REDEMPTION_ID = "redemptionId"
