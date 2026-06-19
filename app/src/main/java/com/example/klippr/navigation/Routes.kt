@@ -18,6 +18,8 @@ object Routes {
 
     const val COMMUNITY = "community"
 
+    const val NOTIFICATIONS = "notifications"
+
     // Rutas con argumentos
     const val PROMOTION_DETAIL = "promotion_detail/{promotionId}"
     const val QR_CODE = "qr_code/{redemptionId}"

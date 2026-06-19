@@ -33,6 +33,13 @@ import com.example.klippr.iam.domain.usecase.SignOutUseCase
 import com.example.klippr.iam.domain.usecase.SignUpConsumerUseCase
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.navigation.AppNavGraph
+import com.example.klippr.notification.data.repository.NotificationRepositoryImpl
+import com.example.klippr.notification.domain.usecase.AddNotificationUseCase
+import com.example.klippr.notification.domain.usecase.GetNotificationsUseCase
+import com.example.klippr.notification.domain.usecase.GetUnreadNotificationCountUseCase
+import com.example.klippr.notification.domain.usecase.MarkAllNotificationsAsReadUseCase
+import com.example.klippr.notification.domain.usecase.MarkNotificationAsReadUseCase
+import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
 import com.example.klippr.profile.data.repository.ProfileRepositoryImpl
 import com.example.klippr.profile.domain.usecase.GetUserProfileUseCase
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
@@ -153,6 +160,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val notificationViewModel: NotificationViewModel by viewModels {
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                val repository = NotificationRepositoryImpl(db.notificationDao())
+                return NotificationViewModel(
+                    getNotifications = GetNotificationsUseCase(repository),
+                    getUnreadCount   = GetUnreadNotificationCountUseCase(repository),
+                    addNotification  = AddNotificationUseCase(repository),
+                    markAsRead       = MarkNotificationAsReadUseCase(repository),
+                    markAllAsRead    = MarkAllNotificationsAsReadUseCase(repository),
+                ) as T
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -165,6 +188,7 @@ class MainActivity : ComponentActivity() {
                     redemptionViewModel = redemptionViewModel,
                     communityViewModel  = communityViewModel,
                     favoriteViewModel   = favoriteViewModel,
+                    notificationViewModel = notificationViewModel,
                     sessionStore        = sessionStore,
                 )
             }
