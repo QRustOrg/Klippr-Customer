@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -65,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.R
+import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
 import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
@@ -96,16 +98,19 @@ fun HomeScreen(
     profileViewModel: ProfileViewModel,
     promotionViewModel: PromotionViewModel,
     redemptionViewModel: RedemptionViewModel,
+    notificationViewModel: NotificationViewModel,
     onNavigateToSettings: () -> Unit,
     onNavigateToExplore: () -> Unit,
     onNavigateToMisPromos: () -> Unit,
     onNavigateToCommunity: () -> Unit,
     onNavigateToQr: (String) -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val profileState by profileViewModel.state.collectAsStateWithLifecycle()
     val promoState by promotionViewModel.listState.collectAsStateWithLifecycle()
     val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
+    val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         profileViewModel.load()
@@ -132,8 +137,9 @@ fun HomeScreen(
         topBar = {
             HomeTopBar(
                 name = greeting,
-                onBell = {},
+                onBell = onNavigateToNotifications,
                 onSettings = onNavigateToSettings,
+                unreadCount = notificationState.unreadCount,
             )
         },
         bottomBar = {
@@ -461,7 +467,7 @@ private fun PromotionCategory.label(): String = when (this) {
 }
 
 @Composable
-private fun HomeTopBar(name: String, onBell: () -> Unit, onSettings: () -> Unit) {
+private fun HomeTopBar(name: String, onBell: () -> Unit, onSettings: () -> Unit, unreadCount: Int = 0) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -491,9 +497,25 @@ private fun HomeTopBar(name: String, onBell: () -> Unit, onSettings: () -> Unit)
             fontSize = 24.sp,
             modifier = Modifier.weight(1f),
         )
+        Box {
         IconButton(onClick = onBell) {
-            Icon(Icons.Default.Notifications, contentDescription = "Notificaciones", tint = Color.White, modifier = Modifier.size(26.dp))
+            Icon(
+                Icons.Default.Notifications,
+                contentDescription = "Notificaciones",
+                tint = Color.White
+            )
         }
+        if (unreadCount > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-4).dp, y = 4.dp)
+                    .size(8.dp)
+                    .background(Color(0xFFE53935), CircleShape),
+            )
+        }
+    }
+
         IconButton(onClick = onSettings) {
             Icon(Icons.Default.Settings, contentDescription = "Ajustes", tint = Color.White, modifier = Modifier.size(26.dp))
         }

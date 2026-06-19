@@ -22,6 +22,9 @@ import com.example.klippr.iam.presentation.view.ResetPasswordScreen
 import com.example.klippr.iam.presentation.view.SignInScreen
 import com.example.klippr.iam.presentation.view.SignUpScreen
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
+import com.example.klippr.notification.domain.model.NotificationType
+import com.example.klippr.notification.presentation.view.NotificationScreen
+import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
 import com.example.klippr.profile.presentation.view.ProfileScreen
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.presentation.view.ExploreScreen
@@ -41,6 +44,7 @@ fun AppNavGraph(
     redemptionViewModel: RedemptionViewModel,
     communityViewModel: CommunityViewModel,          // ← nuevo
     favoriteViewModel: FavoriteViewModel,
+    notificationViewModel: NotificationViewModel,
     sessionStore: SessionDataStore,                  // ← nuevo
     navController: NavHostController = rememberNavController(),
 ) {
@@ -93,11 +97,13 @@ fun AppNavGraph(
                 profileViewModel    = profileViewModel,
                 promotionViewModel  = viewModel,
                 redemptionViewModel = redemptionViewModel,
+                notificationViewModel  = notificationViewModel,
                 onNavigateToSettings  = { navController.navigate(Routes.SETTINGS) },
                 onNavigateToExplore   = { navController.navigate(Routes.EXPLORE) },
                 onNavigateToMisPromos = { navController.navigate(Routes.misPromos(Routes.TAB_CODES)) },
                 onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
                 onNavigateToQr        = { id -> navController.navigate(Routes.redemptionSuccess(id)) },
+                onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
             )
         }
 
@@ -161,6 +167,12 @@ fun AppNavGraph(
             LaunchedEffect(redemptionState.generated) {
                 redemptionState.generated?.let { code ->
                     navController.navigate(Routes.redemptionSuccess(code.id))
+                    notificationViewModel.notify(
+                        type = NotificationType.REDEMPTION_GENERATED,
+                        title = "¡Código generado!",
+                        message = "Tu código para \"${code.promotionTitle ?: "una promo"}\" está listo.",
+                        relatedId = code.id,
+                    )
                     redemptionViewModel.consumeGenerated()
                 }
             }
@@ -169,12 +181,23 @@ fun AppNavGraph(
                 promotionId     = promotionId,
                 viewModel       = viewModel,
                 onBack          = { navController.popBackStack() },
-                onApplyDiscount = { promo -> redemptionViewModel.generate(promo) },
+                onApplyDiscount = { promo ->
+                    redemptionViewModel.generate(promo)
+                },
                 onNavigateToReviews = { navController.navigate(Routes.community(promotionId)) },
                 isGenerating    = redemptionState.isGenerating,
                 errorMessage    = redemptionState.error,
                 onToggleFavorite = { id, isFavorite ->
-                    if (isFavorite) favoriteViewModel.addFavorite(currentUserId, id)
+                    if (isFavorite) {
+                        favoriteViewModel.addFavorite(currentUserId, id) {
+                            notificationViewModel.notify(
+                                type = NotificationType.FAVORITE_ADDED,
+                                title = "Guardado en favoritos",
+                                message = "Agregaste una promo a tus favoritos.",
+                                relatedId = id,
+                            )
+                        }
+                    }
                 },
             )
         }
@@ -303,5 +326,23 @@ fun AppNavGraph(
                 onNavigateMisPromos = { navController.navigate(Routes.misPromos(Routes.TAB_FAVORITES)) },
             )
         }
+
+        composable(Routes.NOTIFICATIONS) {
+            NotificationScreen(
+                viewModel = notificationViewModel,
+                onBack = { navController.popBackStack() },
+                onNotificationClick = { notif ->
+                    notif.relatedId?.let { id ->
+                        val route = when (notif.type) {
+                            NotificationType.FAVORITE_ADDED -> Routes.promotionDetail(id)
+                            NotificationType.REDEMPTION_GENERATED,
+                            NotificationType.REDEMPTION_EXPIRING -> Routes.qrCode(id)
+                        }
+                        navController.navigate(route)
+                    }
+                },
+            )
+        }
+
     }
 }
