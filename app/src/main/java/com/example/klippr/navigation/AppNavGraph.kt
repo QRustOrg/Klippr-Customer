@@ -55,6 +55,15 @@ fun AppNavGraph(
         }
     }
 
+    LaunchedEffect(sessionStore, navController) {
+        sessionStore.sessionExpiredEvents.collect {
+            authViewModel.markSessionExpired()
+            navController.navigate(Routes.SIGN_IN) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     NavHost(navController = navController, startDestination = Routes.SPLASH) {
 
         composable(Routes.SPLASH) {
@@ -93,11 +102,15 @@ fun AppNavGraph(
         }
 
         composable(Routes.HOME) {
+            val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
+            val currentUserId = session?.user?.userId ?: ""
             HomeScreen(
                 profileViewModel    = profileViewModel,
                 promotionViewModel  = viewModel,
+                favoriteViewModel   = favoriteViewModel,
                 redemptionViewModel = redemptionViewModel,
                 notificationViewModel  = notificationViewModel,
+                currentUserId       = currentUserId,
                 onNavigateToSettings  = { navController.navigate(Routes.SETTINGS) },
                 onNavigateToExplore   = { navController.navigate(Routes.EXPLORE) },
                 onNavigateToMisPromos = { navController.navigate(Routes.misPromos(Routes.TAB_CODES)) },
@@ -143,8 +156,12 @@ fun AppNavGraph(
         }
 
         composable(Routes.EXPLORE) {
+            val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
+            val currentUserId = session?.user?.userId ?: ""
             ExploreScreen(
                 viewModel           = viewModel,
+                favoriteViewModel   = favoriteViewModel,
+                currentUserId       = currentUserId,
                 onBack              = { navController.popBackStack() },
                 onNavigateToDetail  = { id -> navController.navigate(Routes.promotionDetail(id)) },
                 onNavigateToHome    = {
@@ -161,8 +178,14 @@ fun AppNavGraph(
         ) { backStackEntry ->
             val promotionId    = backStackEntry.arguments?.getString(Routes.ARG_PROMOTION_ID).orEmpty()
             val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
+            val favoriteState by favoriteViewModel.state.collectAsStateWithLifecycle()
             val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
             val currentUserId = session?.user?.userId ?: ""
+            val favorite = favoriteState.visibleFavorites.firstOrNull { it.promotionId == promotionId }
+
+            LaunchedEffect(currentUserId) {
+                favoriteViewModel.loadFavorites(currentUserId)
+            }
 
             LaunchedEffect(redemptionState.generated) {
                 redemptionState.generated?.let { code ->
@@ -187,15 +210,23 @@ fun AppNavGraph(
                 onNavigateToReviews = { navController.navigate(Routes.community(promotionId)) },
                 isGenerating    = redemptionState.isGenerating,
                 errorMessage    = redemptionState.error,
+                isFavoriteOverride = favorite != null,
                 onToggleFavorite = { id, isFavorite ->
                     if (isFavorite) {
                         favoriteViewModel.addFavorite(currentUserId, id) {
+                            viewModel.toggleFavorite(id, true)
                             notificationViewModel.notify(
                                 type = NotificationType.FAVORITE_ADDED,
                                 title = "Guardado en favoritos",
                                 message = "Agregaste una promo a tus favoritos.",
                                 relatedId = id,
                             )
+                        }
+                    } else {
+                        favorite?.let {
+                            favoriteViewModel.deleteFavorite(it.favoriteId, currentUserId) {
+                                viewModel.toggleFavorite(id, false)
+                            }
                         }
                     }
                 },
@@ -282,7 +313,8 @@ fun AppNavGraph(
             }),
         ) { backStackEntry ->
             val initialTab = when (backStackEntry.arguments?.getString(Routes.ARG_TAB)) {
-                Routes.TAB_CODES -> 1
+                Routes.TAB_ARCHIVED -> 1
+                Routes.TAB_CODES -> 2
                 else -> 0
             }
             val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
@@ -319,6 +351,7 @@ fun AppNavGraph(
             val currentUserId = session?.user?.userId ?: ""
             CommunityScreen(
                 viewModel         = communityViewModel,
+                favoriteViewModel = favoriteViewModel,
                 currentUserId     = currentUserId,
                 promotionId       = promotionIdFilter,
                 onNavigateHome    = { navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } } },

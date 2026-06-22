@@ -79,6 +79,12 @@ class AuthViewModel(
         }
     }
 
+    fun markSessionExpired() {
+        _state.update {
+            AuthUiState(error = "Tu sesión expiró. Inicia sesión nuevamente.")
+        }
+    }
+
     /** Paso 1 "olvide mi contrasena": solicita al backend enviar el enlace por correo. */
     fun requestPasswordRecovery(email: String) {
         if (email.isBlank()) {

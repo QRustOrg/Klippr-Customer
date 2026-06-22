@@ -7,6 +7,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.example.klippr.iam.domain.model.Session
 import com.example.klippr.iam.domain.model.User
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -16,6 +18,9 @@ private val Context.sessionStore by preferencesDataStore(name = "session")
 
 /** Persiste datos mínimos de sesión (token + identidad) usando Preferences DataStore. */
 class SessionDataStore(private val context: Context) {
+
+    private val _sessionExpiredEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val sessionExpiredEvents: SharedFlow<Unit> = _sessionExpiredEvents
 
     private object Keys {
         val TOKEN = stringPreferencesKey("token")
@@ -51,5 +56,10 @@ class SessionDataStore(private val context: Context) {
 
     suspend fun clear() {
         context.sessionStore.edit { it.clear() }
+    }
+
+    suspend fun expireSession() {
+        clear()
+        _sessionExpiredEvents.tryEmit(Unit)
     }
 }

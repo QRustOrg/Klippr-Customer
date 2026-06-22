@@ -22,7 +22,9 @@ import com.example.klippr.core.network.NetworkModule
 import com.example.klippr.favorites.data.repository.FavoriteRepositoryImpl
 import com.example.klippr.favorites.domain.usecase.GetUserFavoritesUseCase
 import com.example.klippr.favorites.domain.usecase.RemoveFavoriteUseCase
+import com.example.klippr.favorites.domain.usecase.RestoreFavoriteUseCase
 import com.example.klippr.favorites.domain.usecase.SaveFavoriteUseCase
+import com.example.klippr.favorites.domain.usecase.ArchiveFavoriteUseCase
 import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.iam.data.repository.AuthRepositoryImpl
 import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
@@ -155,6 +157,8 @@ class MainActivity : ComponentActivity() {
                     getUserFavorites = GetUserFavoritesUseCase(repository),
                     saveFavorite     = SaveFavoriteUseCase(repository),
                     removeFavorite   = RemoveFavoriteUseCase(repository),
+                    archiveFavoriteUseCase = ArchiveFavoriteUseCase(repository),
+                    restoreFavoriteUseCase = RestoreFavoriteUseCase(repository),
                 ) as T
             }
         }

@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
@@ -127,8 +126,8 @@ fun MisPromosScreen(
     LaunchedEffect(Unit) { viewModel.loadHistory() }
     LaunchedEffect(currentUserId) { favoriteViewModel.loadFavorites(currentUserId) }
 
-    // 0 = Favoritos (tab por defecto), 1 = Mis Promos (activos/canjeados/expirados)
-    var outerTab by remember(initialOuterTab) { mutableIntStateOf(initialOuterTab.coerceIn(0, 1)) }
+    // 0 = Favoritos, 1 = Archivados, 2 = Mis Promos (activos/canjeados/expirados)
+    var outerTab by remember(initialOuterTab) { mutableIntStateOf(initialOuterTab.coerceIn(0, 2)) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
     // US-13: ReviewBottomSheet como modal sobre MisPromos
@@ -147,7 +146,11 @@ fun MisPromosScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        if (outerTab == 0) "Favoritos" else "Mis Promos",
+                        when (outerTab) {
+                            1 -> "Archivados"
+                            2 -> "Mis Promos"
+                            else -> "Favoritos"
+                        },
                         fontWeight = FontWeight.Bold, color = Color.White, fontSize = 24.sp,
                     )
                 },
@@ -169,22 +172,46 @@ fun MisPromosScreen(
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             TabRow(selectedTabIndex = outerTab, containerColor = Color.White, contentColor = KlipprPurple) {
                 Tab(selected = outerTab == 0, onClick = { outerTab = 0 }, text = { Text("Favoritos") })
-                Tab(selected = outerTab == 1, onClick = { outerTab = 1 }, text = { Text("Mis Promos") })
+                Tab(selected = outerTab == 1, onClick = { outerTab = 1 }, text = { Text("Archivados") })
+                Tab(selected = outerTab == 2, onClick = { outerTab = 2 }, text = { Text("Mis Promos") })
             }
 
-            if (outerTab == 0) {
-                FavoritesTabContent(
+            when (outerTab) {
+                0 -> FavoritesTabContent(
                     favorites = favoriteState.visibleFavorites,
                     isLoading = favoriteState.isLoading,
                     promotions = promotionListState.promotions,
+                    emptyText = "Aun no tienes favoritos. Marca una promo con el corazon para verla aqui.",
+                    secondaryActionLabel = "Archivar",
+                    onVerDetalles = onNavigateToDetail,
+                    onEliminar = { fav ->
+                        favoriteViewModel.deleteFavorite(fav.favoriteId, currentUserId) {
+                            promotionViewModel.toggleFavorite(fav.promotionId, false)
+                        }
+                    },
+                    onSecondaryAction = { fav ->
+                        favoriteViewModel.archiveFavorite(fav.favoriteId, currentUserId) {
+                            promotionViewModel.toggleFavorite(fav.promotionId, false)
+                        }
+                    },
+                )
+                1 -> FavoritesTabContent(
+                    favorites = favoriteState.archivedFavorites,
+                    isLoading = favoriteState.isLoading,
+                    promotions = promotionListState.promotions,
+                    emptyText = "No tienes favoritos archivados.",
+                    secondaryActionLabel = "Restaurar",
                     onVerDetalles = onNavigateToDetail,
                     onEliminar = { fav ->
                         favoriteViewModel.deleteFavorite(fav.favoriteId, currentUserId)
-                        promotionViewModel.toggleFavorite(fav.promotionId, false)
                     },
-                    onArchivar = { fav -> favoriteViewModel.archiveFavorite(fav.favoriteId) },
+                    onSecondaryAction = { fav ->
+                        favoriteViewModel.restoreFavorite(fav.favoriteId, currentUserId) {
+                            promotionViewModel.toggleFavorite(fav.promotionId, true)
+                        }
+                    },
                 )
-            } else {
+                else -> {
                 PromosTabRow(
                     selected = selectedTab,
                     counts = intArrayOf(state.active.size, state.redeemed.size, state.expired.size),
@@ -230,6 +257,7 @@ fun MisPromosScreen(
                     }
                 }
             }
+            }
         }
     }
 }
@@ -241,15 +269,17 @@ private fun FavoritesTabContent(
     favorites: List<Favorite>,
     isLoading: Boolean,
     promotions: List<Promotion>,
+    emptyText: String,
+    secondaryActionLabel: String,
     onVerDetalles: (String) -> Unit,
     onEliminar: (Favorite) -> Unit,
-    onArchivar: (Favorite) -> Unit,
+    onSecondaryAction: (Favorite) -> Unit,
 ) {
     when {
         isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = KlipprPurple)
         }
-        favorites.isEmpty() -> EmptyMessage("Aún no tienes favoritos. Marca una promo con el corazón para verla aquí.")
+        favorites.isEmpty() -> EmptyMessage(emptyText)
         else -> LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
@@ -260,9 +290,10 @@ private fun FavoritesTabContent(
                 FavoriteCard(
                     favorite = fav,
                     promotion = promo,
+                    secondaryActionLabel = secondaryActionLabel,
                     onVerDetalles = { onVerDetalles(fav.promotionId) },
                     onEliminar = { onEliminar(fav) },
-                    onArchivar = { onArchivar(fav) },
+                    onSecondaryAction = { onSecondaryAction(fav) },
                 )
             }
         }
@@ -273,9 +304,10 @@ private fun FavoritesTabContent(
 private fun FavoriteCard(
     favorite: Favorite,
     promotion: Promotion?,
+    secondaryActionLabel: String,
     onVerDetalles: () -> Unit,
     onEliminar: () -> Unit,
-    onArchivar: () -> Unit,
+    onSecondaryAction: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Column(
@@ -328,7 +360,7 @@ private fun FavoriteCard(
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(text = { Text("Eliminar") }, onClick = { menuOpen = false; onEliminar() })
-                    DropdownMenuItem(text = { Text("Archivar") }, onClick = { menuOpen = false; onArchivar() })
+                    DropdownMenuItem(text = { Text(secondaryActionLabel) }, onClick = { menuOpen = false; onSecondaryAction() })
                 }
             }
         }

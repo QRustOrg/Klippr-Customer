@@ -1,5 +1,6 @@
 package com.example.klippr.community.presentation.view
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,8 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.outlined.RateReview
@@ -18,16 +17,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.klippr.community.domain.model.Review
 import com.example.klippr.community.domain.model.ReviewComment
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
+import com.example.klippr.favorites.domain.model.Favorite as FavoritePromotion
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
+import com.example.klippr.shared.presentation.component.FavoriteHeartButton
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 import com.example.klippr.ui.theme.KlipprPurple
 import java.text.SimpleDateFormat
 import java.util.*
@@ -41,6 +47,7 @@ private val LikePink        = Color(0xFFE91E63)
 @Composable
 fun CommunityScreen(
     viewModel: CommunityViewModel,
+    favoriteViewModel: FavoriteViewModel,
     currentUserId: String = "current_user",
     promotionId: String? = null,
     onNavigateHome: () -> Unit = {},
@@ -48,9 +55,19 @@ fun CommunityScreen(
     onNavigateMisPromos: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val favoriteState by favoriteViewModel.state.collectAsState()
+    val favoriteByPromotion = remember(favoriteState.visibleFavorites) {
+        favoriteByPromotionId(favoriteState.visibleFavorites)
+    }
 
     LaunchedEffect(promotionId) {
         viewModel.setPromotionFilter(promotionId)
+    }
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotBlank()) {
+            favoriteViewModel.loadFavorites(currentUserId)
+        }
     }
 
     if (uiState.isReviewSheetOpen) {
@@ -124,8 +141,18 @@ fun CommunityScreen(
                     ReviewFeed(
                         reviews = uiState.reviews,
                         commentsByReviewId = uiState.commentsByReviewId,
+                        favoriteByPromotionId = favoriteByPromotion,
                         promotionId = promotionId,
-                        onLike = { reviewId -> viewModel.toggleLike(reviewId) },
+                        onToggleFavorite = { review ->
+                            if (currentUserId.isNotBlank()) {
+                                val favorite = favoriteByPromotion[review.promotionId]
+                                if (favorite == null) {
+                                    favoriteViewModel.addFavorite(currentUserId, review.promotionId)
+                                } else {
+                                    favoriteViewModel.deleteFavorite(favorite.favoriteId, currentUserId)
+                                }
+                            }
+                        },
                         onComment = viewModel::openCommentSheet,
                     )
                 }
@@ -152,8 +179,9 @@ fun CommunityScreen(
 private fun ReviewFeed(
     reviews: List<Review>,
     commentsByReviewId: Map<String, List<ReviewComment>>,
+    favoriteByPromotionId: Map<String, FavoritePromotion>,
     promotionId: String?,
-    onLike: (String) -> Unit,
+    onToggleFavorite: (Review) -> Unit,
     onComment: (Review) -> Unit,
 ) {
     LazyColumn(
@@ -173,7 +201,8 @@ private fun ReviewFeed(
             ReviewCard(
                 review = review,
                 commentCount = commentsByReviewId[review.id]?.size,
-                onLike = { onLike(review.id) },
+                isFavorite = favoriteByPromotionId.containsKey(review.promotionId),
+                onToggleFavorite = { onToggleFavorite(review) },
                 onComment = { onComment(review) },
             )
         }
@@ -186,7 +215,8 @@ private fun ReviewFeed(
 private fun ReviewCard(
     review: Review,
     commentCount: Int?,
-    onLike: () -> Unit,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onComment: () -> Unit,
 ) {
     Card(
@@ -197,21 +227,7 @@ private fun ReviewCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(KlipprLavender),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = review.promotionTitle.take(1),
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = KlipprPurple.copy(alpha = 0.3f)
-                )
-            }
+            PromotionReviewImage(review)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -289,28 +305,62 @@ private fun ReviewCard(
                         color = KlipprPurple,
                     )
                 }
-                IconButton(onClick = onLike, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = if (review.isLikedByCurrentUser) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = "Me gusta",
-                        tint = if (review.isLikedByCurrentUser) LikePink else Color.Gray,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                if (review.likeCount > 0) {
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = review.likeCount.toString(),
-                        fontSize = 12.sp,
-                        color = Color.Gray,
-                    )
-                }
+                FavoriteHeartButton(
+                    isFavorite = isFavorite,
+                    onClick = onToggleFavorite,
+                    selectedTint = LikePink,
+                    unselectedTint = Color.Gray,
+                    modifier = Modifier.size(32.dp),
+                )
             }
         }
     }
 }
 
 // ─── Avatar circular con inicial ─────────────────────────────────────────────
+@Composable
+private fun PromotionReviewImage(review: Review) {
+    val imageModel = review.promotionImageUrl.takeIf { it.isNotBlank() }
+    val resId = rememberPromoDrawableId(imageModel)
+    val imageModifier = Modifier
+        .fillMaxWidth()
+        .height(120.dp)
+        .clip(RoundedCornerShape(12.dp))
+        .background(KlipprLavender)
+
+    Box(
+        modifier = imageModifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            resId != 0 -> {
+                Image(
+                    painter = painterResource(resId),
+                    contentDescription = review.promotionTitle,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            isRemoteImageModel(imageModel) -> {
+                AsyncImage(
+                    model = imageModel,
+                    contentDescription = review.promotionTitle,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            else -> {
+                Text(
+                    text = review.promotionTitle.take(1),
+                    fontSize = 40.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = KlipprPurple.copy(alpha = 0.3f),
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CommentBottomSheet(

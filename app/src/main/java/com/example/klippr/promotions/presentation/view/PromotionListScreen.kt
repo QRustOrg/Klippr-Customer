@@ -20,8 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -57,6 +55,7 @@ import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.shared.presentation.component.DiscountBadge
+import com.example.klippr.shared.presentation.component.FavoriteHeartButton
 
 // @author Samuel Bonifacio
 
@@ -254,14 +253,14 @@ fun PromotionCard(
                 }
             }
 
-            // Favorite button
-            IconButton(onClick = onFavoriteClick) {
-                Icon(
-                    imageVector = if (promotion.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (promotion.isFavorite) "Quitar favorito" else "Agregar favorito",
-                    tint = if (promotion.isFavorite) MaterialTheme.colorScheme.primary else Color.LightGray,
-                )
-            }
+            FavoriteHeartButton(
+                isFavorite = promotion.isFavorite,
+                onClick = onFavoriteClick,
+                modifier = Modifier.size(44.dp),
+                backgroundColor = Color.Transparent,
+                selectedTint = MaterialTheme.colorScheme.primary,
+                unselectedTint = Color.LightGray,
+            )
         }
     }
 }

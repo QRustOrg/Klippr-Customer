@@ -28,8 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCut
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCode2
@@ -66,6 +64,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.R
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
+import com.example.klippr.notification.domain.model.NotificationType
 import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
 import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
@@ -75,6 +75,7 @@ import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.shared.presentation.component.DiscountBadge
+import com.example.klippr.shared.presentation.component.FavoriteHeartButton
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
 import com.example.klippr.ui.theme.KlipprCardPink
@@ -97,8 +98,10 @@ private val StarAmber = Color(0xFFFFC107)
 fun HomeScreen(
     profileViewModel: ProfileViewModel,
     promotionViewModel: PromotionViewModel,
+    favoriteViewModel: FavoriteViewModel,
     redemptionViewModel: RedemptionViewModel,
     notificationViewModel: NotificationViewModel,
+    currentUserId: String,
     onNavigateToSettings: () -> Unit,
     onNavigateToExplore: () -> Unit,
     onNavigateToMisPromos: () -> Unit,
@@ -109,13 +112,18 @@ fun HomeScreen(
 ) {
     val profileState by profileViewModel.state.collectAsStateWithLifecycle()
     val promoState by promotionViewModel.listState.collectAsStateWithLifecycle()
+    val favoriteState by favoriteViewModel.state.collectAsStateWithLifecycle()
     val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
+    val favoriteByPromotion = remember(favoriteState.visibleFavorites) {
+        favoriteState.visibleFavorites.associateBy { it.promotionId }
+    }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(currentUserId) {
         profileViewModel.load()
         redemptionViewModel.loadHistory()
         promotionViewModel.loadActive()
+        favoriteViewModel.loadFavorites(currentUserId)
     }
 
     val greeting = profileState.profile?.greetingName ?: ""
@@ -213,8 +221,26 @@ fun HomeScreen(
                         PromoCategorySection(
                             title = category.label(),
                             promotions = grouped[category].orEmpty(),
+                            favoriteByPromotionId = favoriteByPromotion,
                             onPromotionClick = { promo -> selectedPromotion = promo },
-                            onFavoriteClick = { id, fav -> promotionViewModel.toggleFavorite(id, fav) },
+                            onFavoriteClick = { promo ->
+                                val favorite = favoriteByPromotion[promo.id]
+                                if (favorite == null) {
+                                    favoriteViewModel.addFavorite(currentUserId, promo.id) {
+                                        promotionViewModel.toggleFavorite(promo.id, true)
+                                        notificationViewModel.notify(
+                                            type = NotificationType.FAVORITE_ADDED,
+                                            title = "Guardado en favoritos",
+                                            message = "Agregaste una promo a tus favoritos.",
+                                            relatedId = promo.id,
+                                        )
+                                    }
+                                } else {
+                                    favoriteViewModel.deleteFavorite(favorite.favoriteId, currentUserId) {
+                                        promotionViewModel.toggleFavorite(promo.id, false)
+                                    }
+                                }
+                            },
                             onSeeMore = onNavigateToExplore,
                         )
                         Spacer(Modifier.height(20.dp))
@@ -243,8 +269,9 @@ fun HomeScreen(
 private fun PromoCategorySection(
     title: String,
     promotions: List<Promotion>,
+    favoriteByPromotionId: Map<String, com.example.klippr.favorites.domain.model.Favorite>,
     onPromotionClick: (Promotion) -> Unit,
-    onFavoriteClick: (String, Boolean) -> Unit,
+    onFavoriteClick: (Promotion) -> Unit,
     onSeeMore: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -268,8 +295,9 @@ private fun PromoCategorySection(
         items(promotions, key = { it.id }) { promo ->
             PromoCardVertical(
                 promotion = promo,
+                isFavorite = favoriteByPromotionId.containsKey(promo.id),
                 onClick = { onPromotionClick(promo) },
-                onFavoriteClick = { onFavoriteClick(promo.id, !promo.isFavorite) },
+                onFavoriteClick = { onFavoriteClick(promo) },
                 onShareClick = {
                     val send = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
@@ -285,6 +313,7 @@ private fun PromoCategorySection(
 @Composable
 private fun PromoCardVertical(
     promotion: Promotion,
+    isFavorite: Boolean,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onShareClick: () -> Unit = {},
@@ -310,23 +339,14 @@ private fun PromoCardVertical(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp)
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.28f))
-                    .clickable(onClick = onFavoriteClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (promotion.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (promotion.isFavorite) "Quitar favorito" else "Agregar favorito",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            FavoriteHeartButton(
+                isFavorite = isFavorite,
+                onClick = onFavoriteClick,
+                selectedTint = Color.White,
+                unselectedTint = Color.White,
+                backgroundColor = Color.Black.copy(alpha = 0.28f),
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)

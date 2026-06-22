@@ -36,5 +36,6 @@ object Routes {
     const val ARG_REDEMPTION_ID = "redemptionId"
     const val ARG_TAB = "tab"
     const val TAB_FAVORITES = "favorites"
+    const val TAB_ARCHIVED = "archived"
     const val TAB_CODES = "codes"
 }

@@ -24,8 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -66,6 +64,7 @@ import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.util.formatVence
 import com.example.klippr.shared.presentation.component.discountLabel
+import com.example.klippr.shared.presentation.component.FavoriteHeartButton
 import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 import com.example.klippr.ui.theme.KlipprCardPink
 import com.example.klippr.ui.theme.KlipprPurple
@@ -83,6 +82,7 @@ fun PromotionDetailScreen(
     onNavigateToReviews: (promotionId: String) -> Unit = { _ -> },
     isGenerating: Boolean = false,
     errorMessage: String? = null,
+    isFavoriteOverride: Boolean? = null,
     onToggleFavorite: (promotionId: String, isFavorite: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
@@ -120,11 +120,10 @@ fun PromotionDetailScreen(
                     errorMessage = errorMessage,
                     onApplyDiscount = onApplyDiscount,
                     onBack = onBack,
-                    isFavorite = promotion.isFavorite,
+                    isFavorite = isFavoriteOverride ?: promotion.isFavorite,
                     onShare = { sharePromotion(context, promotion, businessDisplayName) },
                     onToggleFavorite = {
-                        val nextValue = !promotion.isFavorite
-                        viewModel.toggleFavorite(promotion.id, nextValue)
+                        val nextValue = !(isFavoriteOverride ?: promotion.isFavorite)
                         onToggleFavorite(promotion.id, nextValue)
                     },
                     onNavigateToReviews = { onNavigateToReviews(promotion.id) },
@@ -349,13 +348,13 @@ private fun TopActions(
                 )
             }
             Spacer(Modifier.width(8.dp))
-            FloatingIconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (isFavorite) "Quitar favorito" else "Agregar favorito",
-                    tint = if (isFavorite) KlipprPurple else KlipprTextDark,
-                )
-            }
+            FavoriteHeartButton(
+                isFavorite = isFavorite,
+                onClick = onToggleFavorite,
+                selectedTint = KlipprPurple,
+                unselectedTint = KlipprTextDark,
+                backgroundColor = Color.White.copy(alpha = 0.92f),
+            )
         }
     }
 }
