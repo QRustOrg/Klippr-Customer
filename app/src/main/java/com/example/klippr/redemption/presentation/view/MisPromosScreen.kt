@@ -78,6 +78,7 @@ import com.example.klippr.redemption.domain.model.RedemptionStatus
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 import com.example.klippr.shared.presentation.component.discountLabel
 import com.example.klippr.ui.theme.KlipprTextDark
 import com.example.klippr.ui.theme.KlipprTextGray
@@ -183,7 +184,14 @@ fun MisPromosScreen(
                     promotions = promotionListState.promotions,
                     emptyText = "Aun no tienes favoritos. Marca una promo con el corazon para verla aqui.",
                     secondaryActionLabel = "Archivar",
-                    onVerDetalles = onNavigateToDetail,
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
+                    onVerDetalles = { fav ->
+                        favoriteViewModel.openFavoriteDetails(fav.favoriteId, onNavigateToDetail)
+                    },
+                    onFavoriteSaved = { fav ->
+                        promotionViewModel.toggleFavorite(fav.promotionId, true)
+                    },
                     onEliminar = { fav ->
                         favoriteViewModel.deleteFavorite(fav.favoriteId, currentUserId) {
                             promotionViewModel.toggleFavorite(fav.promotionId, false)
@@ -201,9 +209,18 @@ fun MisPromosScreen(
                     promotions = promotionListState.promotions,
                     emptyText = "No tienes favoritos archivados.",
                     secondaryActionLabel = "Restaurar",
-                    onVerDetalles = onNavigateToDetail,
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
+                    onVerDetalles = { fav ->
+                        favoriteViewModel.openFavoriteDetails(fav.favoriteId, onNavigateToDetail)
+                    },
+                    onFavoriteSaved = { fav ->
+                        promotionViewModel.toggleFavorite(fav.promotionId, true)
+                    },
                     onEliminar = { fav ->
-                        favoriteViewModel.deleteFavorite(fav.favoriteId, currentUserId)
+                        favoriteViewModel.deleteFavorite(fav.favoriteId, currentUserId) {
+                            promotionViewModel.toggleFavorite(fav.promotionId, false)
+                        }
                     },
                     onSecondaryAction = { fav ->
                         favoriteViewModel.restoreFavorite(fav.favoriteId, currentUserId) {
@@ -271,7 +288,10 @@ private fun FavoritesTabContent(
     promotions: List<Promotion>,
     emptyText: String,
     secondaryActionLabel: String,
-    onVerDetalles: (String) -> Unit,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
+    onVerDetalles: (Favorite) -> Unit,
+    onFavoriteSaved: (Favorite) -> Unit,
     onEliminar: (Favorite) -> Unit,
     onSecondaryAction: (Favorite) -> Unit,
 ) {
@@ -291,7 +311,10 @@ private fun FavoritesTabContent(
                     favorite = fav,
                     promotion = promo,
                     secondaryActionLabel = secondaryActionLabel,
-                    onVerDetalles = { onVerDetalles(fav.promotionId) },
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
+                    onVerDetalles = { onVerDetalles(fav) },
+                    onFavoriteSaved = { onFavoriteSaved(fav) },
                     onEliminar = { onEliminar(fav) },
                     onSecondaryAction = { onSecondaryAction(fav) },
                 )
@@ -305,7 +328,10 @@ private fun FavoriteCard(
     favorite: Favorite,
     promotion: Promotion?,
     secondaryActionLabel: String,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onVerDetalles: () -> Unit,
+    onFavoriteSaved: () -> Unit,
     onEliminar: () -> Unit,
     onSecondaryAction: () -> Unit,
 ) {
@@ -353,7 +379,17 @@ private fun FavoriteCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(Icons.Default.Bookmark, contentDescription = "Guardado", tint = KlipprPurple, modifier = Modifier.size(22.dp))
+            RemoteFavoriteHeartButton(
+                userId = currentUserId,
+                promotionId = favorite.promotionId,
+                isFavorite = true,
+                favoriteViewModel = favoriteViewModel,
+                selectedTint = KlipprPurple,
+                unselectedTint = TextSecondary,
+                backgroundColor = Color.Transparent,
+                modifier = Modifier.size(32.dp),
+                onSaved = onFavoriteSaved,
+            )
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(Icons.Default.MoreVert, contentDescription = "Más opciones", tint = TextSecondary)

@@ -19,6 +19,7 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
         val promotionId = dto.promotionId.orEmpty()
         val expiresAt = dto.expiresAt.parseInstantOrNull()
         val redeemedAt = dto.confirmedAt.parseInstantOrNull()
+        val blockedAt = dto.blockedAt.parseInstantOrNull()
 
         // Resumen embebido o, si falta, traído de la API de promociones.
         val embedded = PromoSummary(
@@ -40,10 +41,11 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
             businessId = dto.businessId,
             code = dto.code.orEmpty(),
             token = dto.token.orEmpty(),
-            status = resolveStatus(dto.status, expiresAt, redeemedAt),
+            status = resolveStatus(dto.status, expiresAt, redeemedAt, blockedAt),
             discountAppliedAmount = dto.discountAppliedAmount ?: summary.discountValue ?: 0.0,
             expiresAt = expiresAt,
             redeemedAt = redeemedAt,
+            blockedAt = blockedAt,
             businessName = summary.businessName,
             promotionTitle = summary.title,
             discountValue = summary.discountValue,
@@ -82,15 +84,15 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
 }
 
 // Normaliza el status del backend; deriva EXPIRED si la fecha de vencimiento ya pasó.
-private fun resolveStatus(raw: String?, expiresAt: Instant?, redeemedAt: Instant?): RedemptionStatus {
+private fun resolveStatus(raw: String?, expiresAt: Instant?, redeemedAt: Instant?, blockedAt: Instant?): RedemptionStatus {
     val normalized = raw?.trim()?.replace(Regex("[_\\-\\s]"), "")?.lowercase()
     val base = when (normalized) {
-        "redeemed", "confirmed", "used", "completed" -> RedemptionStatus.REDEEMED
+        "redeemed", "blocked", "confirmed", "used", "completed" -> RedemptionStatus.REDEEMED
         "expired", "cancelled", "canceled", "void"   -> RedemptionStatus.EXPIRED
         "active", "pending", "created", "issued", "generated", null, "" -> RedemptionStatus.ACTIVE
         else -> RedemptionStatus.ACTIVE
     }
-    if (base == RedemptionStatus.REDEEMED || redeemedAt != null) return RedemptionStatus.REDEEMED
+    if (base == RedemptionStatus.REDEEMED || redeemedAt != null || blockedAt != null) return RedemptionStatus.REDEEMED
     if (base == RedemptionStatus.ACTIVE && expiresAt != null && expiresAt.isBefore(Instant.now())) {
         return RedemptionStatus.EXPIRED
     }

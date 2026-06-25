@@ -11,6 +11,9 @@ class FavoriteRepositoryImpl (
     override suspend fun getFavoritesByUser(userId: String, archived: Boolean): List<Favorite> =
         api.getByUser(userId, archived).items.map { it.toDomain() }
 
+    override suspend fun getFavoriteById(favoriteId: String): Favorite =
+        api.getById(favoriteId).toDomain()
+
     override suspend fun saveFavorite(userId: String, promotionId: String): Favorite =
         api.save(mapOf("userId" to userId, "promotionId" to promotionId)).toDomain()
 

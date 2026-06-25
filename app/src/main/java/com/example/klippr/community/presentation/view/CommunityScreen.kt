@@ -30,9 +30,9 @@ import com.example.klippr.community.domain.model.ReviewComment
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
 import com.example.klippr.favorites.domain.model.Favorite as FavoritePromotion
 import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
-import com.example.klippr.shared.presentation.component.FavoriteHeartButton
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 import com.example.klippr.ui.theme.KlipprPurple
 import java.text.SimpleDateFormat
@@ -142,17 +142,9 @@ fun CommunityScreen(
                         reviews = uiState.reviews,
                         commentsByReviewId = uiState.commentsByReviewId,
                         favoriteByPromotionId = favoriteByPromotion,
+                        favoriteViewModel = favoriteViewModel,
+                        currentUserId = currentUserId,
                         promotionId = promotionId,
-                        onToggleFavorite = { review ->
-                            if (currentUserId.isNotBlank()) {
-                                val favorite = favoriteByPromotion[review.promotionId]
-                                if (favorite == null) {
-                                    favoriteViewModel.addFavorite(currentUserId, review.promotionId)
-                                } else {
-                                    favoriteViewModel.deleteFavorite(favorite.favoriteId, currentUserId)
-                                }
-                            }
-                        },
                         onComment = viewModel::openCommentSheet,
                     )
                 }
@@ -180,8 +172,9 @@ private fun ReviewFeed(
     reviews: List<Review>,
     commentsByReviewId: Map<String, List<ReviewComment>>,
     favoriteByPromotionId: Map<String, FavoritePromotion>,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     promotionId: String?,
-    onToggleFavorite: (Review) -> Unit,
     onComment: (Review) -> Unit,
 ) {
     LazyColumn(
@@ -202,7 +195,8 @@ private fun ReviewFeed(
                 review = review,
                 commentCount = commentsByReviewId[review.id]?.size,
                 isFavorite = favoriteByPromotionId.containsKey(review.promotionId),
-                onToggleFavorite = { onToggleFavorite(review) },
+                favoriteViewModel = favoriteViewModel,
+                currentUserId = currentUserId,
                 onComment = { onComment(review) },
             )
         }
@@ -216,7 +210,8 @@ private fun ReviewCard(
     review: Review,
     commentCount: Int?,
     isFavorite: Boolean,
-    onToggleFavorite: () -> Unit,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onComment: () -> Unit,
 ) {
     Card(
@@ -305,9 +300,11 @@ private fun ReviewCard(
                         color = KlipprPurple,
                     )
                 }
-                FavoriteHeartButton(
+                RemoteFavoriteHeartButton(
+                    userId = currentUserId,
+                    promotionId = review.promotionId,
                     isFavorite = isFavorite,
-                    onClick = onToggleFavorite,
+                    favoriteViewModel = favoriteViewModel,
                     selectedTint = LikePink,
                     unselectedTint = Color.Gray,
                     modifier = Modifier.size(32.dp),

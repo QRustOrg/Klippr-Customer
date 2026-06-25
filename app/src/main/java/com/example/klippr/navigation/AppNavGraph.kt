@@ -203,6 +203,8 @@ fun AppNavGraph(
             PromotionDetailScreen(
                 promotionId     = promotionId,
                 viewModel       = viewModel,
+                favoriteViewModel = favoriteViewModel,
+                currentUserId   = currentUserId,
                 onBack          = { navController.popBackStack() },
                 onApplyDiscount = { promo ->
                     redemptionViewModel.generate(promo)
@@ -211,23 +213,14 @@ fun AppNavGraph(
                 isGenerating    = redemptionState.isGenerating,
                 errorMessage    = redemptionState.error,
                 isFavoriteOverride = favorite != null,
-                onToggleFavorite = { id, isFavorite ->
-                    if (isFavorite) {
-                        favoriteViewModel.addFavorite(currentUserId, id) {
-                            viewModel.toggleFavorite(id, true)
-                            notificationViewModel.notify(
-                                type = NotificationType.FAVORITE_ADDED,
-                                title = "Guardado en favoritos",
-                                message = "Agregaste una promo a tus favoritos.",
-                                relatedId = id,
-                            )
-                        }
-                    } else {
-                        favorite?.let {
-                            favoriteViewModel.deleteFavorite(it.favoriteId, currentUserId) {
-                                viewModel.toggleFavorite(id, false)
-                            }
-                        }
+                onFavoriteSaved = { id ->
+                    if (favorite == null) {
+                        notificationViewModel.notify(
+                            type = NotificationType.FAVORITE_ADDED,
+                            title = "Guardado en favoritos",
+                            message = "Agregaste una promo a tus favoritos.",
+                            relatedId = id,
+                        )
                     }
                 },
             )

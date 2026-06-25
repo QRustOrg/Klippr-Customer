@@ -75,9 +75,9 @@ import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.shared.presentation.component.DiscountBadge
-import com.example.klippr.shared.presentation.component.FavoriteHeartButton
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 import com.example.klippr.ui.theme.KlipprCardPink
 import com.example.klippr.ui.theme.KlipprPurple
 import com.example.klippr.ui.theme.KlipprTextDark
@@ -222,23 +222,18 @@ fun HomeScreen(
                             title = category.label(),
                             promotions = grouped[category].orEmpty(),
                             favoriteByPromotionId = favoriteByPromotion,
+                            favoriteViewModel = favoriteViewModel,
+                            currentUserId = currentUserId,
                             onPromotionClick = { promo -> selectedPromotion = promo },
-                            onFavoriteClick = { promo ->
-                                val favorite = favoriteByPromotion[promo.id]
-                                if (favorite == null) {
-                                    favoriteViewModel.addFavorite(currentUserId, promo.id) {
-                                        promotionViewModel.toggleFavorite(promo.id, true)
-                                        notificationViewModel.notify(
-                                            type = NotificationType.FAVORITE_ADDED,
-                                            title = "Guardado en favoritos",
-                                            message = "Agregaste una promo a tus favoritos.",
-                                            relatedId = promo.id,
-                                        )
-                                    }
-                                } else {
-                                    favoriteViewModel.deleteFavorite(favorite.favoriteId, currentUserId) {
-                                        promotionViewModel.toggleFavorite(promo.id, false)
-                                    }
+                            onFavoriteSaved = { promo, wasFavorite ->
+                                promotionViewModel.toggleFavorite(promo.id, true)
+                                if (!wasFavorite) {
+                                    notificationViewModel.notify(
+                                        type = NotificationType.FAVORITE_ADDED,
+                                        title = "Guardado en favoritos",
+                                        message = "Agregaste una promo a tus favoritos.",
+                                        relatedId = promo.id,
+                                    )
                                 }
                             },
                             onSeeMore = onNavigateToExplore,
@@ -270,8 +265,10 @@ private fun PromoCategorySection(
     title: String,
     promotions: List<Promotion>,
     favoriteByPromotionId: Map<String, com.example.klippr.favorites.domain.model.Favorite>,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onPromotionClick: (Promotion) -> Unit,
-    onFavoriteClick: (Promotion) -> Unit,
+    onFavoriteSaved: (Promotion, Boolean) -> Unit,
     onSeeMore: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -293,11 +290,14 @@ private fun PromoCategorySection(
     }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         items(promotions, key = { it.id }) { promo ->
+            val isFavorite = favoriteByPromotionId.containsKey(promo.id)
             PromoCardVertical(
                 promotion = promo,
-                isFavorite = favoriteByPromotionId.containsKey(promo.id),
+                isFavorite = isFavorite,
+                favoriteViewModel = favoriteViewModel,
+                currentUserId = currentUserId,
                 onClick = { onPromotionClick(promo) },
-                onFavoriteClick = { onFavoriteClick(promo) },
+                onFavoriteSaved = { onFavoriteSaved(promo, isFavorite) },
                 onShareClick = {
                     val send = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
@@ -314,8 +314,10 @@ private fun PromoCategorySection(
 private fun PromoCardVertical(
     promotion: Promotion,
     isFavorite: Boolean,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
+    onFavoriteSaved: () -> Unit,
     onShareClick: () -> Unit = {},
 ) {
     Column(
@@ -339,13 +341,16 @@ private fun PromoCardVertical(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            FavoriteHeartButton(
+            RemoteFavoriteHeartButton(
+                userId = currentUserId,
+                promotionId = promotion.id,
                 isFavorite = isFavorite,
-                onClick = onFavoriteClick,
+                favoriteViewModel = favoriteViewModel,
                 selectedTint = Color.White,
                 unselectedTint = Color.White,
                 backgroundColor = Color.Black.copy(alpha = 0.28f),
                 modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+                onSaved = onFavoriteSaved,
             )
             Box(
                 modifier = Modifier

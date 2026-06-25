@@ -19,6 +19,7 @@ data class RedemptionCode(
     val discountAppliedAmount: Double,
     val expiresAt: Instant?,
     val redeemedAt: Instant?,
+    val blockedAt: Instant?,
     // Resumen de la promo para la tarjeta
     val businessName: String?,
     val promotionTitle: String?,

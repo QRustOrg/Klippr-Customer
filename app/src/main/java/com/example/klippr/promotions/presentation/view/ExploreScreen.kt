@@ -77,9 +77,9 @@ import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
-import com.example.klippr.shared.presentation.component.FavoriteHeartButton
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 import com.example.klippr.ui.theme.KlipprTextDark
 import com.example.klippr.ui.theme.KlipprTextGray
@@ -275,18 +275,9 @@ fun ExploreScreen(
                                 category = category,
                                 promotions = promos,
                                 favoriteByPromotionId = favoriteByPromotion,
-                                onFavoriteClick = { promo ->
-                                    val favorite = favoriteByPromotion[promo.id]
-                                    if (favorite == null) {
-                                        favoriteViewModel.addFavorite(currentUserId, promo.id) {
-                                            viewModel.toggleFavorite(promo.id, true)
-                                        }
-                                    } else {
-                                        favoriteViewModel.deleteFavorite(favorite.favoriteId, currentUserId) {
-                                            viewModel.toggleFavorite(promo.id, false)
-                                        }
-                                    }
-                                },
+                                favoriteViewModel = favoriteViewModel,
+                                currentUserId = currentUserId,
+                                onFavoriteSaved = { promo -> viewModel.toggleFavorite(promo.id, true) },
                                 onPromotionClick = onNavigateToDetail,
                             )
                         }
@@ -668,7 +659,9 @@ private fun ExploreCategorySection(
     category: PromotionCategory,
     promotions: List<Promotion>,
     favoriteByPromotionId: Map<String, com.example.klippr.favorites.domain.model.Favorite>,
-    onFavoriteClick: (Promotion) -> Unit,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
+    onFavoriteSaved: (Promotion) -> Unit,
     onPromotionClick: (String) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
@@ -711,8 +704,10 @@ private fun ExploreCategorySection(
                 ExplorePromoCard(
                     promotion = promo,
                     isFavorite = favoriteByPromotionId.containsKey(promo.id),
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
                     onClick = { onPromotionClick(promo.id) },
-                    onFavoriteClick = { onFavoriteClick(promo) },
+                    onFavoriteSaved = { onFavoriteSaved(promo) },
                 )
             }
         }
@@ -723,8 +718,10 @@ private fun ExploreCategorySection(
 private fun ExplorePromoCard(
     promotion: Promotion,
     isFavorite: Boolean,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
+    onFavoriteSaved: () -> Unit,
 ) {
     Card(
         onClick = onClick,
@@ -756,15 +753,18 @@ private fun ExplorePromoCard(
                         modifier = imageModifier,
                     )
                 }
-                FavoriteHeartButton(
+                RemoteFavoriteHeartButton(
+                    userId = currentUserId,
+                    promotionId = promotion.id,
                     isFavorite = isFavorite,
-                    onClick = onFavoriteClick,
+                    favoriteViewModel = favoriteViewModel,
                     selectedTint = Color.White,
                     unselectedTint = Color.White,
                     backgroundColor = Color.Black.copy(alpha = 0.28f),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp),
+                    onSaved = onFavoriteSaved,
                 )
             }
             Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {

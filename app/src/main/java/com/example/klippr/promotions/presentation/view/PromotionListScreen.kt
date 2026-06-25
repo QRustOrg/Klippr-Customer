@@ -38,6 +38,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,12 +51,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.shared.presentation.component.DiscountBadge
-import com.example.klippr.shared.presentation.component.FavoriteHeartButton
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 
 // @author Samuel Bonifacio
 
@@ -63,10 +65,18 @@ import com.example.klippr.shared.presentation.component.FavoriteHeartButton
 @Composable
 fun PromotionListScreen(
     viewModel: PromotionViewModel,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onPromotionClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.listState.collectAsStateWithLifecycle()
+    val favoriteState by favoriteViewModel.state.collectAsStateWithLifecycle()
+    val favoriteByPromotionId = favoriteState.visibleFavorites.associateBy { it.promotionId }
+
+    LaunchedEffect(currentUserId) {
+        favoriteViewModel.loadFavorites(currentUserId)
+    }
 
     Scaffold(
         topBar = {
@@ -127,8 +137,11 @@ fun PromotionListScreen(
                 state.isEmpty -> EmptyPromotionsContent(onRetry = viewModel::loadAll)
                 else -> PromotionLazyList(
                     promotions = state.displayed,
+                    favoriteByPromotionId = favoriteByPromotionId,
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
                     onItemClick = onPromotionClick,
-                    onFavoriteClick = { id, fav -> viewModel.toggleFavorite(id, fav) },
+                    onFavoriteSaved = { id -> viewModel.toggleFavorite(id, true) },
                 )
             }
         }
@@ -175,8 +188,11 @@ private fun CategoryFilterRow(
 @Composable
 private fun PromotionLazyList(
     promotions: List<Promotion>,
+    favoriteByPromotionId: Map<String, com.example.klippr.favorites.domain.model.Favorite>,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onItemClick: (String) -> Unit,
-    onFavoriteClick: (String, Boolean) -> Unit,
+    onFavoriteSaved: (String) -> Unit,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -185,8 +201,11 @@ private fun PromotionLazyList(
         items(promotions, key = { it.id }) { promotion ->
             PromotionCard(
                 promotion = promotion,
+                isFavorite = favoriteByPromotionId.containsKey(promotion.id),
+                favoriteViewModel = favoriteViewModel,
+                currentUserId = currentUserId,
                 onClick = { onItemClick(promotion.id) },
-                onFavoriteClick = { onFavoriteClick(promotion.id, !promotion.isFavorite) },
+                onFavoriteSaved = { onFavoriteSaved(promotion.id) },
             )
         }
     }
@@ -196,8 +215,11 @@ private fun PromotionLazyList(
 @Composable
 fun PromotionCard(
     promotion: Promotion,
+    isFavorite: Boolean,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
+    onFavoriteSaved: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -253,13 +275,16 @@ fun PromotionCard(
                 }
             }
 
-            FavoriteHeartButton(
-                isFavorite = promotion.isFavorite,
-                onClick = onFavoriteClick,
+            RemoteFavoriteHeartButton(
+                userId = currentUserId,
+                promotionId = promotion.id,
+                isFavorite = isFavorite,
+                favoriteViewModel = favoriteViewModel,
                 modifier = Modifier.size(44.dp),
                 backgroundColor = Color.Transparent,
                 selectedTint = MaterialTheme.colorScheme.primary,
                 unselectedTint = Color.LightGray,
+                onSaved = onFavoriteSaved,
             )
         }
     }

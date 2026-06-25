@@ -59,12 +59,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.util.formatVence
 import com.example.klippr.shared.presentation.component.discountLabel
-import com.example.klippr.shared.presentation.component.FavoriteHeartButton
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 import com.example.klippr.ui.theme.KlipprCardPink
 import com.example.klippr.ui.theme.KlipprPurple
@@ -77,13 +78,15 @@ import com.example.klippr.ui.theme.KlipprTextGray
 fun PromotionDetailScreen(
     promotionId: String,
     viewModel: PromotionViewModel,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onBack: () -> Unit,
     onApplyDiscount: (Promotion) -> Unit,
     onNavigateToReviews: (promotionId: String) -> Unit = { _ -> },
     isGenerating: Boolean = false,
     errorMessage: String? = null,
     isFavoriteOverride: Boolean? = null,
-    onToggleFavorite: (promotionId: String, isFavorite: Boolean) -> Unit = { _, _ -> },
+    onFavoriteSaved: (promotionId: String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.detailState.collectAsStateWithLifecycle()
@@ -121,10 +124,12 @@ fun PromotionDetailScreen(
                     onApplyDiscount = onApplyDiscount,
                     onBack = onBack,
                     isFavorite = isFavoriteOverride ?: promotion.isFavorite,
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
                     onShare = { sharePromotion(context, promotion, businessDisplayName) },
-                    onToggleFavorite = {
-                        val nextValue = !(isFavoriteOverride ?: promotion.isFavorite)
-                        onToggleFavorite(promotion.id, nextValue)
+                    onFavoriteSaved = {
+                        viewModel.toggleFavorite(promotion.id, true)
+                        onFavoriteSaved(promotion.id)
                     },
                     onNavigateToReviews = { onNavigateToReviews(promotion.id) },
                 )
@@ -142,8 +147,10 @@ private fun PromotionDetailContent(
     onApplyDiscount: (Promotion) -> Unit,
     onBack: () -> Unit,
     isFavorite: Boolean,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onShare: () -> Unit,
-    onToggleFavorite: () -> Unit,
+    onFavoriteSaved: () -> Unit,
     onNavigateToReviews: () -> Unit,
 ) {
     var accepted by remember(promotion.id) { mutableStateOf(false) }
@@ -162,10 +169,13 @@ private fun PromotionDetailContent(
             ) {
                 PromotionHeroImage(promotion)
                 TopActions(
+                    promotionId = promotion.id,
                     isFavorite = isFavorite,
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
                     onBack = onBack,
                     onShare = onShare,
-                    onToggleFavorite = onToggleFavorite,
+                    onFavoriteSaved = onFavoriteSaved,
                 )
             }
 
@@ -319,10 +329,13 @@ private fun PromotionHeroImage(promotion: Promotion) {
 
 @Composable
 private fun TopActions(
+    promotionId: String,
     isFavorite: Boolean,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onBack: () -> Unit,
     onShare: () -> Unit,
-    onToggleFavorite: () -> Unit,
+    onFavoriteSaved: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -348,12 +361,15 @@ private fun TopActions(
                 )
             }
             Spacer(Modifier.width(8.dp))
-            FavoriteHeartButton(
+            RemoteFavoriteHeartButton(
+                userId = currentUserId,
+                promotionId = promotionId,
                 isFavorite = isFavorite,
-                onClick = onToggleFavorite,
+                favoriteViewModel = favoriteViewModel,
                 selectedTint = KlipprPurple,
                 unselectedTint = KlipprTextDark,
                 backgroundColor = Color.White.copy(alpha = 0.92f),
+                onSaved = onFavoriteSaved,
             )
         }
     }

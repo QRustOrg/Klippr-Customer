@@ -20,6 +20,7 @@ import com.example.klippr.core.database.KlipprDatabase
 import com.example.klippr.core.datastore.SessionDataStore
 import com.example.klippr.core.network.NetworkModule
 import com.example.klippr.favorites.data.repository.FavoriteRepositoryImpl
+import com.example.klippr.favorites.domain.usecase.GetFavoriteByIdUseCase
 import com.example.klippr.favorites.domain.usecase.GetUserFavoritesUseCase
 import com.example.klippr.favorites.domain.usecase.RemoveFavoriteUseCase
 import com.example.klippr.favorites.domain.usecase.RestoreFavoriteUseCase
@@ -155,6 +156,7 @@ class MainActivity : ComponentActivity() {
                 val repository = FavoriteRepositoryImpl(network.favoriteApi)
                 return FavoriteViewModel(
                     getUserFavorites = GetUserFavoritesUseCase(repository),
+                    getFavoriteById  = GetFavoriteByIdUseCase(repository),
                     saveFavorite     = SaveFavoriteUseCase(repository),
                     removeFavorite   = RemoveFavoriteUseCase(repository),
                     archiveFavoriteUseCase = ArchiveFavoriteUseCase(repository),

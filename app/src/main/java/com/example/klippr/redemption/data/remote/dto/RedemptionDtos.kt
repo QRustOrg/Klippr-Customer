@@ -27,13 +27,14 @@ data class ConfirmRedemptionRequestDto(
 data class RedemptionDto(
     @SerializedName(value = "id", alternate = ["redemptionId"]) val id: String?,
     @SerializedName("code")                  val code: String?,
-    @SerializedName("token")                 val token: String?,
+    @SerializedName(value = "token", alternate = ["uniqueToken"]) val token: String?,
     @SerializedName("status")                val status: String?,
     @SerializedName("promotionId")           val promotionId: String?,
     @SerializedName("businessId")            val businessId: String?,
     @SerializedName("consumerId")            val consumerId: String?,
     @SerializedName("expiresAt")             val expiresAt: String?,
     @SerializedName(value = "confirmedAt", alternate = ["redeemedAt"]) val confirmedAt: String?,
+    @SerializedName("blockedAt")             val blockedAt: String?,
     @SerializedName("discountAppliedAmount") val discountAppliedAmount: Double?,
     // Resumen de la promo, si el backend lo embebe
     @SerializedName(value = "businessName", alternate = ["business"])       val businessName: String?,
