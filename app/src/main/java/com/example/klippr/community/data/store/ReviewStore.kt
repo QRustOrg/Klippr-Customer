@@ -1,0 +1,30 @@
+package com.example.klippr.community.data.store
+
+import com.example.klippr.community.domain.model.Review
+import com.example.klippr.community.domain.model.ReviewComment
+import kotlinx.coroutines.flow.Flow
+
+interface ReviewStore {
+
+    fun getAll(): Flow<List<Review>>
+
+    fun getByPromotion(promotionId: String): Flow<List<Review>>
+
+    fun getByUser(userId: String): Flow<List<Review>>
+
+    suspend fun postReview(
+        promotionId: String,
+        rating: Int,
+        comment: String
+    ): Result<Review>
+
+    suspend fun canUserReview(promotionId: String, userId: String): Boolean
+
+    suspend fun toggleLike(reviewId: String): Result<Unit>
+
+    suspend fun getComments(reviewId: String): Result<List<ReviewComment>>
+
+    suspend fun postComment(reviewId: String, comment: String): Result<Unit>
+
+    suspend fun refreshAll()
+}

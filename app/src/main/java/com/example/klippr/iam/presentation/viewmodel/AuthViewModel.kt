@@ -1,0 +1,156 @@
+package com.example.klippr.iam.presentation.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.klippr.iam.application.usecase.GetCurrentUserUseCase
+import com.example.klippr.iam.application.usecase.RequestPasswordRecoveryUseCase
+import com.example.klippr.iam.application.usecase.ResetPasswordUseCase
+import com.example.klippr.iam.application.usecase.SignInUseCase
+import com.example.klippr.iam.application.usecase.SignOutUseCase
+import com.example.klippr.iam.application.usecase.SignUpConsumerUseCase
+import com.example.klippr.iam.presentation.state.AuthUiState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModelProvider
+import com.example.klippr.shared.core.ServiceLocator
+
+// @author Samuel Bonifacio
+/** Coordina inicio/registro de sesión y restaura la sesión guardada al arrancar. */
+class AuthViewModel(
+    private val signInUseCase: SignInUseCase,
+    private val signUpConsumerUseCase: SignUpConsumerUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val signOutUseCase: SignOutUseCase,
+    private val requestPasswordRecoveryUseCase: RequestPasswordRecoveryUseCase,
+    private val resetPasswordUseCase: ResetPasswordUseCase,
+) : ViewModel() {
+
+    private val _state = MutableStateFlow(AuthUiState())
+    val state: StateFlow<AuthUiState> = _state.asStateFlow()
+
+    init { restoreSession() }
+
+    /** Restaura la sesión persistida (auto-login si el token sigue guardado). */
+    private fun restoreSession() {
+        viewModelScope.launch {
+            val user = getCurrentUserUseCase()
+            if (user != null) _state.update { it.copy(user = user) }
+        }
+    }
+
+    fun signIn(email: String, password: String, rememberMe: Boolean = true) {
+        if (email.isBlank() || password.isBlank()) {
+            _state.update { it.copy(error = "Ingresa email y contraseña") }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                val session = signInUseCase(email, password, rememberMe)
+                _state.update { it.copy(isLoading = false, user = session.user) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al iniciar sesión") }
+            }
+        }
+    }
+
+    fun signUp(firstName: String, lastName: String, email: String, password: String) {
+        if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || password.isBlank()) {
+            _state.update { it.copy(error = "Completa todos los campos") }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                val session = signUpConsumerUseCase(firstName, lastName, email, password)
+                _state.update { it.copy(isLoading = false, user = session.user) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al registrarse") }
+            }
+        }
+    }
+
+    /** Cierra sesión: limpia la sesión persistida y resetea el estado a "no autenticado". */
+    fun signOut() {
+        viewModelScope.launch {
+            signOutUseCase()
+            _state.update { AuthUiState() }
+        }
+    }
+
+    fun markSessionExpired() {
+        _state.update {
+            AuthUiState(error = "Tu sesión expiró. Inicia sesión nuevamente.")
+        }
+    }
+
+    /** Paso 1 "olvide mi contrasena": solicita al backend enviar el enlace por correo. */
+    fun requestPasswordRecovery(email: String) {
+        if (email.isBlank()) {
+            _state.update { it.copy(error = "Ingresa tu email") }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                requestPasswordRecoveryUseCase(email)
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        passwordRecoverySent = true,
+                        forgotEmail = email.trim(),
+                    )
+                }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = e.message ?: "No se pudo solicitar la recuperacion") }
+            }
+        }
+    }
+
+    /** Paso 2 "olvidé mi contraseña": valida localmente y fija la nueva contraseña por backend. */
+    fun resetPassword(newPassword: String, confirmPassword: String) {
+        val email = _state.value.forgotEmail
+        when {
+            email.isNullOrBlank() -> { _state.update { it.copy(error = "Email no disponible, reinicia el flujo") }; return }
+            newPassword.isBlank() || confirmPassword.isBlank() -> { _state.update { it.copy(error = "Completa todos los campos") }; return }
+            newPassword != confirmPassword -> { _state.update { it.copy(error = "Las contraseñas no coinciden") }; return }
+            newPassword.length < 6 -> { _state.update { it.copy(error = "Mínimo 6 caracteres") }; return }
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            try {
+                resetPasswordUseCase(email!!, newPassword)
+                _state.update { it.copy(isLoading = false, resetSuccess = true) }
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false, error = e.message ?: "Error al cambiar la contraseña") }
+            }
+        }
+    }
+
+    /** Limpia los flags del flujo de recuperación tras navegar (conserva [AuthUiState.forgotEmail]). */
+    fun consumeResetFlags() = _state.update {
+        it.copy(passwordRecoverySent = false, resetSuccess = false, error = null)
+    }
+
+    fun consumeError() = _state.update { it.copy(error = null) }
+
+    companion object {
+        /** Construye el VM resolviendo sus casos de uso desde el [ServiceLocator]. */
+        fun Factory(serviceLocator: ServiceLocator): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = AuthViewModel(
+                    signInUseCase = SignInUseCase(serviceLocator.authStore),
+                    signUpConsumerUseCase = SignUpConsumerUseCase(serviceLocator.authStore),
+                    getCurrentUserUseCase = GetCurrentUserUseCase(serviceLocator.authStore),
+                    signOutUseCase = SignOutUseCase(serviceLocator.authStore),
+                    requestPasswordRecoveryUseCase = RequestPasswordRecoveryUseCase(serviceLocator.authStore),
+                    resetPasswordUseCase = ResetPasswordUseCase(serviceLocator.authStore),
+                ) as T
+            }
+    }
+
+}
