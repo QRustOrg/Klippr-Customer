@@ -1,7 +1,6 @@
 package com.example.klippr.redemption.domain.model
 
 import com.example.klippr.promotions.domain.model.DiscountType
-import java.time.Instant
 
 // @author Samuel Bonifacio
 /**
@@ -17,9 +16,9 @@ data class RedemptionCode(
     val token: String,
     val status: RedemptionStatus,
     val discountAppliedAmount: Double,
-    val expiresAt: Instant?,
-    val redeemedAt: Instant?,
-    val blockedAt: Instant?,
+    val expiresAt: Long?,
+    val redeemedAt: Long?,
+    val blockedAt: Long?,
     // Resumen de la promo para la tarjeta
     val businessName: String?,
     val promotionTitle: String?,

@@ -2,18 +2,20 @@ package com.example.klippr.favorites.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.klippr.favorites.domain.usecase.ArchiveFavoriteUseCase
-import com.example.klippr.favorites.domain.usecase.GetFavoriteByIdUseCase
-import com.example.klippr.favorites.domain.usecase.GetUserFavoritesUseCase
-import com.example.klippr.favorites.domain.usecase.RemoveFavoriteUseCase
-import com.example.klippr.favorites.domain.usecase.RestoreFavoriteUseCase
-import com.example.klippr.favorites.domain.usecase.SaveFavoriteUseCase
+import com.example.klippr.favorites.application.usecase.ArchiveFavoriteUseCase
+import com.example.klippr.favorites.application.usecase.GetFavoriteByIdUseCase
+import com.example.klippr.favorites.application.usecase.GetUserFavoritesUseCase
+import com.example.klippr.favorites.application.usecase.RemoveFavoriteUseCase
+import com.example.klippr.favorites.application.usecase.RestoreFavoriteUseCase
+import com.example.klippr.favorites.application.usecase.SaveFavoriteUseCase
 import com.example.klippr.favorites.presentation.state.FavoriteUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModelProvider
+import com.example.klippr.shared.core.ServiceLocator
 
 class FavoriteViewModel(
     private val getUserFavorites: GetUserFavoritesUseCase,
@@ -115,4 +117,20 @@ class FavoriteViewModel(
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
         }
     }
+
+    companion object {
+        fun Factory(serviceLocator: ServiceLocator): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = FavoriteViewModel(
+                    getUserFavorites = GetUserFavoritesUseCase(serviceLocator.favoriteStore),
+                    getFavoriteById = GetFavoriteByIdUseCase(serviceLocator.favoriteStore),
+                    saveFavorite = SaveFavoriteUseCase(serviceLocator.favoriteStore),
+                    removeFavorite = RemoveFavoriteUseCase(serviceLocator.favoriteStore),
+                    archiveFavoriteUseCase = ArchiveFavoriteUseCase(serviceLocator.favoriteStore),
+                    restoreFavoriteUseCase = RestoreFavoriteUseCase(serviceLocator.favoriteStore),
+                ) as T
+            }
+    }
+
 }

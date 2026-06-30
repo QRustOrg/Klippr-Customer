@@ -1,13 +1,13 @@
 package com.example.klippr.favorites.presentation.viewmodel
 
 import com.example.klippr.favorites.domain.model.Favorite
-import com.example.klippr.favorites.domain.repository.FavoriteRepository
-import com.example.klippr.favorites.domain.usecase.ArchiveFavoriteUseCase
-import com.example.klippr.favorites.domain.usecase.GetFavoriteByIdUseCase
-import com.example.klippr.favorites.domain.usecase.GetUserFavoritesUseCase
-import com.example.klippr.favorites.domain.usecase.RemoveFavoriteUseCase
-import com.example.klippr.favorites.domain.usecase.RestoreFavoriteUseCase
-import com.example.klippr.favorites.domain.usecase.SaveFavoriteUseCase
+import com.example.klippr.favorites.data.store.FavoriteStore
+import com.example.klippr.favorites.application.usecase.ArchiveFavoriteUseCase
+import com.example.klippr.favorites.application.usecase.GetFavoriteByIdUseCase
+import com.example.klippr.favorites.application.usecase.GetUserFavoritesUseCase
+import com.example.klippr.favorites.application.usecase.RemoveFavoriteUseCase
+import com.example.klippr.favorites.application.usecase.RestoreFavoriteUseCase
+import com.example.klippr.favorites.application.usecase.SaveFavoriteUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -132,7 +132,7 @@ class FavoriteViewModelTest {
         assertEquals("promo-1", resolvedPromotionId)
     }
 
-    private fun viewModel(repository: FavoriteRepository) = FavoriteViewModel(
+    private fun viewModel(repository: FavoriteStore) = FavoriteViewModel(
         getUserFavorites = GetUserFavoritesUseCase(repository),
         getFavoriteById = GetFavoriteByIdUseCase(repository),
         saveFavorite = SaveFavoriteUseCase(repository),
@@ -143,7 +143,7 @@ class FavoriteViewModelTest {
 
     private class FakeFavoriteRepository(
         private val removeError: Throwable? = null,
-    ) : FavoriteRepository {
+    ) : FavoriteStore {
         val savedFavorites = mutableListOf<Pair<String, String>>()
         val archivedFavorites = mutableListOf<Pair<String, String>>()
         val restoredFavorites = mutableListOf<Pair<String, String>>()

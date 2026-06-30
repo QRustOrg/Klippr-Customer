@@ -2,18 +2,20 @@ package com.example.klippr.iam.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
-import com.example.klippr.iam.domain.usecase.RequestPasswordRecoveryUseCase
-import com.example.klippr.iam.domain.usecase.ResetPasswordUseCase
-import com.example.klippr.iam.domain.usecase.SignInUseCase
-import com.example.klippr.iam.domain.usecase.SignOutUseCase
-import com.example.klippr.iam.domain.usecase.SignUpConsumerUseCase
+import com.example.klippr.iam.application.usecase.GetCurrentUserUseCase
+import com.example.klippr.iam.application.usecase.RequestPasswordRecoveryUseCase
+import com.example.klippr.iam.application.usecase.ResetPasswordUseCase
+import com.example.klippr.iam.application.usecase.SignInUseCase
+import com.example.klippr.iam.application.usecase.SignOutUseCase
+import com.example.klippr.iam.application.usecase.SignUpConsumerUseCase
 import com.example.klippr.iam.presentation.state.AuthUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModelProvider
+import com.example.klippr.shared.core.ServiceLocator
 
 // @author Samuel Bonifacio
 /** Coordina inicio/registro de sesión y restaura la sesión guardada al arrancar. */
@@ -134,4 +136,21 @@ class AuthViewModel(
     }
 
     fun consumeError() = _state.update { it.copy(error = null) }
+
+    companion object {
+        /** Construye el VM resolviendo sus casos de uso desde el [ServiceLocator]. */
+        fun Factory(serviceLocator: ServiceLocator): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = AuthViewModel(
+                    signInUseCase = SignInUseCase(serviceLocator.authStore),
+                    signUpConsumerUseCase = SignUpConsumerUseCase(serviceLocator.authStore),
+                    getCurrentUserUseCase = GetCurrentUserUseCase(serviceLocator.authStore),
+                    signOutUseCase = SignOutUseCase(serviceLocator.authStore),
+                    requestPasswordRecoveryUseCase = RequestPasswordRecoveryUseCase(serviceLocator.authStore),
+                    resetPasswordUseCase = ResetPasswordUseCase(serviceLocator.authStore),
+                ) as T
+            }
+    }
+
 }

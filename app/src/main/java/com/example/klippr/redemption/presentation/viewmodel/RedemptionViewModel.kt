@@ -2,19 +2,21 @@ package com.example.klippr.redemption.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
+import com.example.klippr.iam.application.usecase.GetCurrentUserUseCase
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.redemption.domain.model.RedemptionCode
-import com.example.klippr.redemption.domain.usecase.ConfirmRedemptionUseCase
-import com.example.klippr.redemption.domain.usecase.GenerateRedemptionUseCase
-import com.example.klippr.redemption.domain.usecase.GetConsumerRedemptionsUseCase
-import com.example.klippr.redemption.domain.usecase.GetRedemptionByIdUseCase
+import com.example.klippr.redemption.application.usecase.ConfirmRedemptionUseCase
+import com.example.klippr.redemption.application.usecase.GenerateRedemptionUseCase
+import com.example.klippr.redemption.application.usecase.GetConsumerRedemptionsUseCase
+import com.example.klippr.redemption.application.usecase.GetRedemptionByIdUseCase
 import com.example.klippr.redemption.presentation.state.RedemptionUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModelProvider
+import com.example.klippr.shared.core.ServiceLocator
 
 // @author Samuel Bonifacio
 /** ViewModel de Redemption: genera códigos (US-04) y carga el historial (US-05/06). */
@@ -125,4 +127,19 @@ class RedemptionViewModel(
             }
         }
     }
+
+    companion object {
+        fun Factory(serviceLocator: ServiceLocator): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = RedemptionViewModel(
+                    generateRedemption = GenerateRedemptionUseCase(serviceLocator.redemptionStore),
+                    getConsumerRedemptions = GetConsumerRedemptionsUseCase(serviceLocator.redemptionStore),
+                    getRedemptionById = GetRedemptionByIdUseCase(serviceLocator.redemptionStore),
+                    confirmRedemption = ConfirmRedemptionUseCase(serviceLocator.redemptionStore),
+                    getCurrentUser = GetCurrentUserUseCase(serviceLocator.authStore),
+                ) as T
+            }
+    }
+
 }

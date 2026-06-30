@@ -3,11 +3,11 @@ package com.example.klippr.notification.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.notification.domain.model.NotificationType
-import com.example.klippr.notification.domain.usecase.AddNotificationUseCase
-import com.example.klippr.notification.domain.usecase.GetNotificationsUseCase
-import com.example.klippr.notification.domain.usecase.GetUnreadNotificationCountUseCase
-import com.example.klippr.notification.domain.usecase.MarkAllNotificationsAsReadUseCase
-import com.example.klippr.notification.domain.usecase.MarkNotificationAsReadUseCase
+import com.example.klippr.notification.application.usecase.AddNotificationUseCase
+import com.example.klippr.notification.application.usecase.GetNotificationsUseCase
+import com.example.klippr.notification.application.usecase.GetUnreadNotificationCountUseCase
+import com.example.klippr.notification.application.usecase.MarkAllNotificationsAsReadUseCase
+import com.example.klippr.notification.application.usecase.MarkNotificationAsReadUseCase
 import com.example.klippr.notification.presentation.state.NotificationUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModelProvider
+import com.example.klippr.shared.core.ServiceLocator
 
 class NotificationViewModel(
     private val getNotifications: GetNotificationsUseCase,
@@ -51,4 +53,19 @@ class NotificationViewModel(
     fun markAllAsRead() {
         viewModelScope.launch { markAllAsRead.invoke() }
     }
+
+    companion object {
+        fun Factory(serviceLocator: ServiceLocator): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = NotificationViewModel(
+                    getNotifications = GetNotificationsUseCase(serviceLocator.notificationStore),
+                    getUnreadCount = GetUnreadNotificationCountUseCase(serviceLocator.notificationStore),
+                    addNotification = AddNotificationUseCase(serviceLocator.notificationStore),
+                    markAsRead = MarkNotificationAsReadUseCase(serviceLocator.notificationStore),
+                    markAllAsRead = MarkAllNotificationsAsReadUseCase(serviceLocator.notificationStore),
+                ) as T
+            }
+    }
+
 }

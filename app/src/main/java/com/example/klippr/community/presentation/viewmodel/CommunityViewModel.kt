@@ -4,12 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.community.domain.model.Review
-import com.example.klippr.community.domain.usecase.CanUserReviewUseCase
-import com.example.klippr.community.domain.usecase.GetAllReviewsUseCase
-import com.example.klippr.community.domain.usecase.GetReviewCommentsUseCase
-import com.example.klippr.community.domain.usecase.PostReviewCommentUseCase
-import com.example.klippr.community.domain.usecase.PostReviewUseCase
-import com.example.klippr.community.domain.usecase.ToggleLikeUseCase
+import com.example.klippr.community.application.usecase.CanUserReviewUseCase
+import com.example.klippr.community.application.usecase.GetAllReviewsUseCase
+import com.example.klippr.community.application.usecase.GetReviewCommentsUseCase
+import com.example.klippr.community.application.usecase.PostReviewCommentUseCase
+import com.example.klippr.community.application.usecase.PostReviewUseCase
+import com.example.klippr.community.application.usecase.ToggleLikeUseCase
 import com.example.klippr.community.presentation.state.CommunityUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.example.klippr.shared.core.ServiceLocator
 
 class CommunityViewModel(
     private val getAllReviewsUseCase: GetAllReviewsUseCase,
@@ -223,23 +224,18 @@ class CommunityViewModel(
         _uiState.update { it.copy(errorMessage = null) }
     }
 
-    class Factory(
-        private val getAllReviewsUseCase: GetAllReviewsUseCase,
-        private val postReviewUseCase: PostReviewUseCase,
-        private val canUserReviewUseCase: CanUserReviewUseCase,
-        private val toggleLikeUseCase: ToggleLikeUseCase,
-        private val getReviewCommentsUseCase: GetReviewCommentsUseCase,
-        private val postReviewCommentUseCase: PostReviewCommentUseCase,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            CommunityViewModel(
-                getAllReviewsUseCase,
-                postReviewUseCase,
-                canUserReviewUseCase,
-                toggleLikeUseCase,
-                getReviewCommentsUseCase,
-                postReviewCommentUseCase,
-            ) as T
+    companion object {
+        fun Factory(serviceLocator: ServiceLocator): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = CommunityViewModel(
+                    getAllReviewsUseCase = GetAllReviewsUseCase(serviceLocator.reviewStore),
+                    postReviewUseCase = PostReviewUseCase(serviceLocator.reviewStore),
+                    canUserReviewUseCase = CanUserReviewUseCase(serviceLocator.reviewStore),
+                    toggleLikeUseCase = ToggleLikeUseCase(serviceLocator.reviewStore),
+                    getReviewCommentsUseCase = GetReviewCommentsUseCase(serviceLocator.reviewStore),
+                    postReviewCommentUseCase = PostReviewCommentUseCase(serviceLocator.reviewStore),
+                ) as T
+            }
     }
 }
