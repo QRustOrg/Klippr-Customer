@@ -247,7 +247,7 @@ private fun PromotionDetailContent(
                 Spacer(Modifier.height(10.dp))
                 DetailInfoLine("Cantidad:", redemptionsLabel(promotion))
                 Spacer(Modifier.height(10.dp))
-                DetailInfoLine("Vigencia:", "Hasta el ${formatVence(promotion.endDate)}")
+                DetailInfoLine("Vigencia:", "Hasta el ${formatVence(promotion.endDate.toEpochMilli())}")
 
                 promotion.termsAndConditions?.takeIf { it.isNotBlank() }?.let { terms ->
                     Spacer(Modifier.height(10.dp))

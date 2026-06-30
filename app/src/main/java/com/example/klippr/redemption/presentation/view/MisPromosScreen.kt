@@ -88,7 +88,6 @@ import com.example.klippr.redemption.util.formatVence
 import com.example.klippr.redemption.util.generateQrBitmap
 import com.example.klippr.ui.theme.KlipprLavender
 import com.example.klippr.ui.theme.KlipprPurple
-import java.time.Instant
 
 // @author Samuel Bonifacio
 
@@ -626,22 +625,22 @@ private fun applyFilters(
     periodo: Periodo,
     orden: OrdenMonto,
 ): List<RedemptionCode> {
-    val now = Instant.now()
+    val now = System.currentTimeMillis()
     val cutoff = when (periodo) {
         Periodo.TODOS -> null
-        Periodo.HOY -> now.minusSeconds(86_400)
-        Periodo.SEMANA -> now.minusSeconds(7 * 86_400)
-        Periodo.MES -> now.minusSeconds(30 * 86_400)
+        Periodo.HOY -> now - 86_400_000L
+        Periodo.SEMANA -> now - 7 * 86_400_000L
+        Periodo.MES -> now - 30 * 86_400_000L
     }
     var out = codes
     if (negocio != null) {
         out = out.filter { (it.businessName ?: it.promotionTitle) == negocio }
     }
     if (cutoff != null) {
-        out = out.filter { it.redeemedAt != null && it.redeemedAt.isAfter(cutoff) }
+        out = out.filter { it.redeemedAt != null && it.redeemedAt > cutoff }
     }
     out = when (orden) {
-        OrdenMonto.NINGUNO -> out.sortedByDescending { it.redeemedAt ?: Instant.MIN }
+        OrdenMonto.NINGUNO -> out.sortedByDescending { it.redeemedAt ?: Long.MIN_VALUE }
         OrdenMonto.MAYOR -> out.sortedByDescending { it.discountAppliedAmount }
         OrdenMonto.MENOR -> out.sortedBy { it.discountAppliedAmount }
     }
