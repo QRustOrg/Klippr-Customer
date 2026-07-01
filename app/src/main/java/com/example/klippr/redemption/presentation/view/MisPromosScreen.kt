@@ -22,10 +22,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -129,6 +131,7 @@ fun MisPromosScreen(
     // 0 = Favoritos, 1 = Archivados, 2 = Mis Promos (activos/canjeados/expirados)
     var outerTab by remember(initialOuterTab) { mutableIntStateOf(initialOuterTab.coerceIn(0, 2)) }
     var selectedTab by remember { mutableIntStateOf(0) }
+    var clearTarget by remember { mutableStateOf<List<RedemptionCode>?>(null) }
 
     // US-13: ReviewBottomSheet como modal sobre MisPromos
     if (communityUiState.isReviewSheetOpen) {
@@ -138,6 +141,24 @@ fun MisPromosScreen(
             onRatingChanged = communityViewModel::onRatingChanged,
             onCommentChanged = communityViewModel::onCommentChanged,
             onSubmit = communityViewModel::submitReview,
+        )
+    }
+
+    clearTarget?.let { codes ->
+        AlertDialog(
+            onDismissRequest = { clearTarget = null },
+            title = { Text("Limpiar promos") },
+            text = { Text("Se eliminaran ${codes.size} promos de esta lista.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clear(codes); clearTarget = null }) {
+                    Text("Limpiar", color = KlipprPurple, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { clearTarget = null }) {
+                    Text("Cancelar", color = TextSecondary)
+                }
+            },
         )
     }
 
@@ -256,6 +277,7 @@ fun MisPromosScreen(
                         1 -> HistorialList(
                             codes = state.redeemed,
                             onCodeClick = onCodeClick,
+                            onClear = { code -> clearTarget = listOf(code) },
                             onLeaveReview = { code ->
                                 communityViewModel.openReviewSheetForRedeemed(
                                     code.promotionId,
@@ -268,6 +290,7 @@ fun MisPromosScreen(
                             emptyText = "No tienes códigos expirados",
                             onCodeClick = onCodeClick,
                             onMarkRedeemed = null,
+                            onClear = { code -> clearTarget = listOf(code) },
                             isBusy = false,
                         )
                     }
@@ -450,6 +473,7 @@ private fun QrCardsList(
     emptyText: String,
     onCodeClick: (String) -> Unit,
     onMarkRedeemed: ((RedemptionCode) -> Unit)?,
+    onClear: ((RedemptionCode) -> Unit)? = null,
     isBusy: Boolean,
 ) {
     if (codes.isEmpty()) {
@@ -466,6 +490,7 @@ private fun QrCardsList(
                 code = code,
                 onClick = { onCodeClick(code.id) },
                 onMarkRedeemed = onMarkRedeemed?.let { cb -> { cb(code) } },
+                onClear = onClear?.let { cb -> { cb(code) } },
                 isBusy = isBusy,
             )
         }
@@ -477,6 +502,7 @@ private fun QrCard(
     code: RedemptionCode,
     onClick: () -> Unit,
     onMarkRedeemed: (() -> Unit)?,
+    onClear: (() -> Unit)?,
     isBusy: Boolean,
 ) {
     Column(
@@ -516,6 +542,15 @@ private fun QrCard(
                     Spacer(Modifier.width(8.dp))
                     StatusPill(code.status)
                 }
+                if (onClear != null) {
+                    IconButton(
+                        onClick = onClear,
+                        enabled = !isBusy,
+                        modifier = Modifier.align(Alignment.End).size(32.dp),
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Limpiar promo", tint = TextSecondary)
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(text = code.promotionTitle ?: code.discountLabel(), fontSize = 16.sp, color = TextPrimary)
                 Spacer(Modifier.height(10.dp))
@@ -542,6 +577,7 @@ private fun QrCard(
 private fun HistorialList(
     codes: List<RedemptionCode>,
     onCodeClick: (String) -> Unit,
+    onClear: (RedemptionCode) -> Unit,
     onLeaveReview: (RedemptionCode) -> Unit,
 ) {
     var filterOpen by remember { mutableStateOf(false) }
@@ -612,6 +648,7 @@ private fun HistorialList(
                 HistorialCard(
                     code = code,
                     onClick = { onCodeClick(code.id) },
+                    onClear = { onClear(code) },
                     onLeaveReview = { onLeaveReview(code) },
                 )
             }
@@ -651,6 +688,7 @@ private fun applyFilters(
 private fun HistorialCard(
     code: RedemptionCode,
     onClick: () -> Unit,
+    onClear: () -> Unit,
     onLeaveReview: () -> Unit,
 ) {
     Column(
@@ -681,14 +719,20 @@ private fun HistorialCard(
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = code.businessName ?: code.promotionTitle ?: "Promoción",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = code.businessName ?: code.promotionTitle ?: "Promoción",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = onClear, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = "Limpiar promo", tint = TextSecondary)
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = "${code.discountLabel()} - ${formatHora(code.redeemedAt)}",

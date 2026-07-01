@@ -1,0 +1,37 @@
+=C:\Users\crama\Desktop\Klippr-Customer\.superpowers\brainstorm\manual-20260701114553 : El t‚rmino 
+'=C:\Users\crama\Desktop\Klippr-Customer\.superpowers\brainstorm\manual-20260701114553' no se reconoce como nombre de 
+un cmdlet, funci¢n, archivo de script o programa ejecutable. Compruebe si escribi¢ correctamente el nombre o, si 
+incluy¢ una ruta de acceso, compruebe que dicha ruta es correcta e int‚ntelo de nuevo.
+En l¡nea: 1 Car cter: 1
++ ='C:\Users\crama\Desktop\Klippr-Customer\.superpowers\brainstorm\manu ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (=C:\Users\crama...-20260701114553:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+=127.0.0.1 : El t‚rmino '=127.0.0.1' no se reconoce como nombre de un cmdlet, funci¢n, archivo de script o programa 
+ejecutable. Compruebe si escribi¢ correctamente el nombre o, si incluy¢ una ruta de acceso, compruebe que dicha ruta 
+es correcta e int‚ntelo de nuevo.
+En l¡nea: 1 Car cter: 90
++ ... \.superpowers\brainstorm\manual-20260701114553'; ='127.0.0.1'; ='loca ...
++                                                      ~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (=127.0.0.1:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+=localhost : El t‚rmino '=localhost' no se reconoce como nombre de un cmdlet, funci¢n, archivo de script o programa 
+ejecutable. Compruebe si escribi¢ correctamente el nombre o, si incluy¢ una ruta de acceso, compruebe que dicha ruta 
+es correcta e int‚ntelo de nuevo.
+En l¡nea: 1 Car cter: 104
++ ... brainstorm\manual-20260701114553'; ='127.0.0.1'; ='localhost'; ='1858 ...
++                                                      ~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (=localhost:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+=18584 : El t‚rmino '=18584' no se reconoce como nombre de un cmdlet, funci¢n, archivo de script o programa 
+ejecutable. Compruebe si escribi¢ correctamente el nombre o, si incluy¢ una ruta de acceso, compruebe que dicha ruta 
+es correcta e int‚ntelo de nuevo.
+En l¡nea: 1 Car cter: 118
++ ... \manual-20260701114553'; ='127.0.0.1'; ='localhost'; ='18584'; node ' ...
++                                                          ~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (=18584:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 

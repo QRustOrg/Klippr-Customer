@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.klippr.iam.application.usecase.GetCurrentUserUseCase
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.redemption.domain.model.RedemptionCode
+import com.example.klippr.redemption.domain.model.RedemptionStatus
 import com.example.klippr.redemption.application.usecase.ConfirmRedemptionUseCase
 import com.example.klippr.redemption.application.usecase.GenerateRedemptionUseCase
 import com.example.klippr.redemption.application.usecase.GetConsumerRedemptionsUseCase
@@ -92,6 +93,18 @@ class RedemptionViewModel(
     fun consumeGenerated() = _state.update { it.copy(generated = null) }
 
     fun consumeError() = _state.update { it.copy(error = null, codeError = null) }
+
+    fun clear(codes: List<RedemptionCode>) {
+        if (codes.isEmpty()) return
+        val clearedIds = codes.map { it.id }.toSet()
+        _state.update { current ->
+            current.copy(codes = current.codes.filterNot { it.id in clearedIds })
+        }
+    }
+
+    fun clearFinished() {
+        clear(_state.value.codes.filter { it.status != RedemptionStatus.ACTIVE })
+    }
 
     /** Carga un codigo por id para abrir QR desde ruta directa o tras perder estado en memoria. */
     fun loadCodeById(id: String) {
