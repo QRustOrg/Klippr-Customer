@@ -8,31 +8,26 @@ import com.example.klippr.redemption.domain.model.RedemptionStatus
 import java.time.Instant
 
 // @author Samuel Bonifacio
-/**
- * Convierte [RedemptionDto] a dominio. Si el backend no embebe el resumen de la promo,
- * lo enriquece con GET /api/promotions/{id} (fallback fetch, cacheado por petición).
- */
+/** Mapea redenciones y enriquece el resumen de promocion cuando falta metadata visual. */
 class RedemptionMapper(private val promotionApi: PromotionApiService) {
 
-    // Caché por lote para no pedir la misma promo varias veces al mapear una lista.
     suspend fun toDomain(dto: RedemptionDto, promoCache: MutableMap<String, PromoSummary?> = mutableMapOf()): RedemptionCode {
         val promotionId = dto.promotionId.orEmpty()
         val expiresAt = dto.expiresAt.parseInstantOrNull()
         val redeemedAt = dto.confirmedAt.parseInstantOrNull()
         val blockedAt = dto.blockedAt.parseInstantOrNull()
 
-        // Resumen embebido o, si falta, traído de la API de promociones.
         val embedded = PromoSummary(
             businessName = dto.businessName,
             title = dto.promotionTitle,
             discountValue = dto.discountValue,
             discountType = dto.discountType?.toDiscountType(),
-            imageKey = null, // el backend no embebe imageKey en la redención
+            imageKey = dto.imageKey,
         )
-        val summary = if (embedded.isComplete || promotionId.isBlank()) {
+        val summary = if ((embedded.isComplete && embedded.imageKey != null) || promotionId.isBlank()) {
             embedded
         } else {
-            promoCache.getOrPut(promotionId) { fetchSummary(promotionId) } ?: embedded
+            promoCache.getOrPut(promotionId) { fetchSummary(promotionId) }?.mergeOver(embedded) ?: embedded
         }
 
         return RedemptionCode(
@@ -62,7 +57,7 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
     private suspend fun fetchSummary(promotionId: String): PromoSummary? = try {
         val p = promotionApi.getById(promotionId)
         PromoSummary(
-            businessName = p.businessId, // el backend de promo no trae nombre; se usa id como respaldo
+            businessName = p.businessId,
             title = p.title,
             discountValue = p.discountAmount,
             discountType = p.discountType.toDiscountType(),
@@ -80,15 +75,22 @@ class RedemptionMapper(private val promotionApi: PromotionApiService) {
         val imageKey: String?,
     ) {
         val isComplete: Boolean get() = title != null && discountValue != null && discountType != null
+
+        fun mergeOver(fallback: PromoSummary) = PromoSummary(
+            businessName = businessName ?: fallback.businessName,
+            title = title ?: fallback.title,
+            discountValue = discountValue ?: fallback.discountValue,
+            discountType = discountType ?: fallback.discountType,
+            imageKey = imageKey ?: fallback.imageKey,
+        )
     }
 }
 
-// Normaliza el status del backend; deriva EXPIRED si la fecha de vencimiento ya pasó.
 private fun resolveStatus(raw: String?, expiresAt: Instant?, redeemedAt: Instant?, blockedAt: Instant?): RedemptionStatus {
     val normalized = raw?.trim()?.replace(Regex("[_\\-\\s]"), "")?.lowercase()
     val base = when (normalized) {
         "redeemed", "blocked", "confirmed", "used", "completed" -> RedemptionStatus.REDEEMED
-        "expired", "cancelled", "canceled", "void"   -> RedemptionStatus.EXPIRED
+        "expired", "cancelled", "canceled", "void" -> RedemptionStatus.EXPIRED
         "active", "pending", "created", "issued", "generated", null, "" -> RedemptionStatus.ACTIVE
         else -> RedemptionStatus.ACTIVE
     }

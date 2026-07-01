@@ -1,10 +1,16 @@
 package com.example.klippr.profile.data.store
 
+import com.example.klippr.profile.domain.model.UserPreference
 import com.example.klippr.profile.domain.model.UserProfile
 
 // @author Samuel Bonifacio
-/** Contrato de perfil: obtiene los datos del usuario autenticado sin filtrar detalles de red. */
+/** Contrato de perfil: usuario autenticado y preferencias de cuenta. */
 interface ProfileStore {
-    /** Datos del usuario actual (resuelve el id desde la sesión guardada). */
     suspend fun getCurrentProfile(): UserProfile
+
+    suspend fun getCurrentPreference(): UserPreference?
+
+    suspend fun createPreference(preference: UserPreference): UserPreference
+
+    suspend fun updatePreference(preference: UserPreference): UserPreference
 }

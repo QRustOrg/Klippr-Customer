@@ -41,4 +41,5 @@ data class RedemptionDto(
     @SerializedName(value = "promotionTitle", alternate = ["title"])        val promotionTitle: String?,
     @SerializedName(value = "discountAmount", alternate = ["discountValue"]) val discountValue: Double?,
     @SerializedName("discountType")          val discountType: String?,
+    @SerializedName("imageKey")              val imageKey: String?,
 )

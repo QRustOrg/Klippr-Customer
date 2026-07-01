@@ -25,7 +25,7 @@ import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.notification.domain.model.NotificationType
 import com.example.klippr.notification.presentation.view.NotificationScreen
 import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
-import com.example.klippr.profile.presentation.view.ProfileScreen
+import com.example.klippr.profile.presentation.views.ProfileScreen
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.presentation.view.ExploreScreen
 import com.example.klippr.promotions.presentation.view.PromotionDetailScreen
@@ -122,6 +122,7 @@ fun AppNavGraph(
 
         composable(Routes.SETTINGS) {
             SettingsScreen(
+                viewModel = profileViewModel,
                 onBack              = { navController.popBackStack() },
                 onNavigateToProfile = { navController.navigate(Routes.PROFILE) },
                 onLogout            = logout,

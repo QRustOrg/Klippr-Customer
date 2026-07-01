@@ -1,11 +1,28 @@
 package com.example.klippr.profile.presentation.state
 
+import com.example.klippr.profile.domain.model.UserPreference
 import com.example.klippr.profile.domain.model.UserProfile
+import com.example.klippr.redemption.domain.model.RedemptionCode
 
 // @author Samuel Bonifacio
-/** Estado de la pantalla de perfil. */
+/** Estado del centro de cuenta. */
 data class ProfileUiState(
     val isLoading: Boolean = false,
+    val isSavingPreference: Boolean = false,
     val profile: UserProfile? = null,
+    val preference: UserPreference? = null,
+    val stats: ProfileStats = ProfileStats(),
+    val latestRedemptions: List<RedemptionCode> = emptyList(),
     val error: String? = null,
+    val preferenceError: String? = null,
+    val activityError: String? = null,
+    val profileSaveMessage: String? = null,
+)
+
+data class ProfileStats(
+    val totalRedemptions: Int = 0,
+    val activeRedemptions: Int = 0,
+    val redeemedRedemptions: Int = 0,
+    val totalSavings: Double? = null,
+    val averageTransactionValue: Double? = null,
 )
