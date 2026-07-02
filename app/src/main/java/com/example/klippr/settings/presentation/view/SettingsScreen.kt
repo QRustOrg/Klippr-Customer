@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Accessibility
@@ -47,7 +46,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -70,13 +68,15 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.preferences.domain.model.UserPreference
 import com.example.klippr.preferences.presentation.viewmodel.PreferenceViewModel
-import com.example.klippr.ui.theme.KlipprPurple
+import com.example.klippr.shared.presentation.components.KlipprBottomBar
+import com.example.klippr.shared.presentation.components.KlipprTab
+import com.example.klippr.shared.presentation.components.KlipprTopBar
+import com.example.klippr.shared.presentation.theme.KlipprPurple
 
 private val ScreenBg = Color.White
 private val Ink = Color(0xFF202027)
 private val Muted = Color(0xFF777780)
 private val Divider = Color(0xFFE3E3E6)
-private val CircleBg = Color(0xFFF2F2F3)
 private val Danger = Color(0xFFD32F2F)
 private val SoftPurple = Color(0xFFF1EFFF)
 
@@ -201,29 +201,39 @@ fun SettingsScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToDetail: (String) -> Unit,
     onLogout: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onNavigateFavorites: () -> Unit,
+    onNavigatePromos: () -> Unit,
+    onNavigateCommunity: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    Scaffold(containerColor = ScreenBg, modifier = modifier) { innerPadding ->
+    SettingsScaffold(
+        title = "Ajustes",
+        onBack = onBack,
+        onNavigateHome = onNavigateHome,
+        onNavigateFavorites = onNavigateFavorites,
+        onNavigatePromos = onNavigatePromos,
+        onNavigateCommunity = onNavigateCommunity,
+        modifier = modifier,
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 28.dp),
+                .padding(horizontal = 20.dp, vertical = 22.dp),
         ) {
-            CircleBackButton(onBack = onBack)
-            Spacer(Modifier.height(44.dp))
             Text(
                 text = "Ajustes de cuenta",
                 color = Ink,
                 fontWeight = FontWeight.Bold,
-                fontSize = 38.sp,
-                lineHeight = 42.sp,
+                fontSize = 28.sp,
+                lineHeight = 34.sp,
             )
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(24.dp))
             accountSettingsSections().forEach { section ->
                 SettingsHubRow(
                     section = section,
@@ -260,21 +270,32 @@ fun SettingsDetailScreen(
     sectionKey: String,
     viewModel: PreferenceViewModel,
     onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onNavigateFavorites: () -> Unit,
+    onNavigatePromos: () -> Unit,
+    onNavigateCommunity: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val section = accountSettingsSections().firstOrNull { it.routeKey == sectionKey }
 
-    Scaffold(containerColor = ScreenBg, modifier = modifier) { innerPadding ->
+    SettingsScaffold(
+        title = section?.title ?: "Ajustes",
+        onBack = onBack,
+        onNavigateHome = onNavigateHome,
+        onNavigateFavorites = onNavigateFavorites,
+        onNavigatePromos = onNavigatePromos,
+        onNavigateCommunity = onNavigateCommunity,
+        modifier = modifier,
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 28.dp),
+                .padding(horizontal = 20.dp, vertical = 22.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
-            CircleBackButton(onBack = onBack)
             if (section == null) {
                 DetailHeader(
                     icon = Icons.Default.Settings,
@@ -287,8 +308,9 @@ fun SettingsDetailScreen(
             when (section.kind) {
                 SettingsSectionKind.Privacy -> PreferenceContent(
                     preference = state.preference,
-                    error = state.preferenceError,
-                    isSaving = state.isSavingPreference,
+                    error = state.error,
+                    saveMessage = state.saveMessage,
+                    isSaving = state.isSaving,
                     onSave = viewModel::savePreference,
                     content = { current, onDraftChange ->
                         ToggleSettingRow(
@@ -311,8 +333,9 @@ fun SettingsDetailScreen(
                 )
                 SettingsSectionKind.Notifications -> PreferenceContent(
                     preference = state.preference,
-                    error = state.preferenceError,
-                    isSaving = state.isSavingPreference,
+                    error = state.error,
+                    saveMessage = state.saveMessage,
+                    isSaving = state.isSaving,
                     onSave = viewModel::savePreference,
                     content = { current, onDraftChange ->
                         ToggleSettingRow(
@@ -340,8 +363,9 @@ fun SettingsDetailScreen(
                 )
                 SettingsSectionKind.Preferences -> PreferenceContent(
                     preference = state.preference,
-                    error = state.preferenceError,
-                    isSaving = state.isSavingPreference,
+                    error = state.error,
+                    saveMessage = state.saveMessage,
+                    isSaving = state.isSaving,
                     onSave = viewModel::savePreference,
                     content = { current, onDraftChange ->
                         ChoiceSettingRow(
@@ -381,15 +405,31 @@ fun SettingsDetailScreen(
 }
 
 @Composable
-private fun CircleBackButton(onBack: () -> Unit) {
-    IconButton(
-        onClick = onBack,
-        modifier = Modifier
-            .size(58.dp)
-            .clip(CircleShape)
-            .background(CircleBg),
-    ) {
-        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Ink, modifier = Modifier.size(30.dp))
+private fun SettingsScaffold(
+    title: String,
+    onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onNavigateFavorites: () -> Unit,
+    onNavigatePromos: () -> Unit,
+    onNavigateCommunity: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit,
+) {
+    Scaffold(
+        topBar = { KlipprTopBar(title = title, onBack = onBack) },
+        bottomBar = {
+            KlipprBottomBar(
+                current = KlipprTab.INICIO,
+                onInicio = onNavigateHome,
+                onFavoritos = onNavigateFavorites,
+                onPromos = onNavigatePromos,
+                onComunidad = onNavigateCommunity,
+            )
+        },
+        containerColor = ScreenBg,
+        modifier = modifier,
+    ) { innerPadding ->
+        content(innerPadding)
     }
 }
 
@@ -438,6 +478,7 @@ private fun DetailHeader(icon: ImageVector, title: String, description: String) 
 private fun PreferenceContent(
     preference: UserPreference?,
     error: String?,
+    saveMessage: String?,
     isSaving: Boolean,
     onSave: (UserPreference) -> Unit,
     content: @Composable ColumnScope.(UserPreference, (UserPreference) -> Unit) -> Unit,
@@ -463,6 +504,7 @@ private fun PreferenceContent(
         ) {
             Text(if (isSaving) "Guardando..." else "Guardar cambios", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
+        saveMessage?.let { SuccessNotice(it) }
         error?.let { Notice(it) }
     }
 }
@@ -564,6 +606,20 @@ private fun Notice(message: String) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFFFFECEB))
+            .padding(12.dp),
+    )
+}
+
+@Composable
+private fun SuccessNotice(message: String) {
+    Text(
+        text = message,
+        color = Color(0xFF168A4A),
+        fontSize = 13.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFE8F7EF))
             .padding(12.dp),
     )
 }

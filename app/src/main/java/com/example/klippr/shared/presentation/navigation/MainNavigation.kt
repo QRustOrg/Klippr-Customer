@@ -109,6 +109,14 @@ fun MainNavHost(
                 onNavigateToProfile = { navController.navigate(ProfileRoutes.PROFILE) },
                 onNavigateToDetail = { section -> navController.navigate(MainRoutes.settingsDetail(section)) },
                 onLogout = logout,
+                onNavigateHome = {
+                    navController.navigate(MainRoutes.HOME) {
+                        popUpTo(MainRoutes.HOME) { inclusive = true }
+                    }
+                },
+                onNavigateFavorites = { navController.navigate(RedemptionRoutes.misPromos(RedemptionRoutes.TAB_FAVORITES)) },
+                onNavigatePromos = { navController.navigate(PromotionRoutes.EXPLORE) },
+                onNavigateCommunity = { navController.navigate(CommunityRoutes.COMMUNITY) },
             )
         }
 
@@ -120,6 +128,14 @@ fun MainNavHost(
                 sectionKey = backStackEntry.arguments?.getString(MainRoutes.ARG_SETTINGS_SECTION).orEmpty(),
                 viewModel = preferenceViewModel,
                 onBack = { navController.popBackStack() },
+                onNavigateHome = {
+                    navController.navigate(MainRoutes.HOME) {
+                        popUpTo(MainRoutes.HOME) { inclusive = true }
+                    }
+                },
+                onNavigateFavorites = { navController.navigate(RedemptionRoutes.misPromos(RedemptionRoutes.TAB_FAVORITES)) },
+                onNavigatePromos = { navController.navigate(PromotionRoutes.EXPLORE) },
+                onNavigateCommunity = { navController.navigate(CommunityRoutes.COMMUNITY) },
             )
         }
 

@@ -129,6 +129,14 @@ fun AppNavGraph(
                 onNavigateToProfile = { navController.navigate(Routes.PROFILE) },
                 onNavigateToDetail  = { section -> navController.navigate(Routes.settingsDetail(section)) },
                 onLogout            = logout,
+                onNavigateHome      = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
+                },
+                onNavigateFavorites = { navController.navigate(Routes.misPromos(Routes.TAB_FAVORITES)) },
+                onNavigatePromos    = { navController.navigate(Routes.EXPLORE) },
+                onNavigateCommunity = { navController.navigate(Routes.COMMUNITY) },
             )
         }
 
@@ -140,6 +148,14 @@ fun AppNavGraph(
                 sectionKey = backStackEntry.arguments?.getString(Routes.ARG_SETTINGS_SECTION).orEmpty(),
                 viewModel = preferenceViewModel,
                 onBack = { navController.popBackStack() },
+                onNavigateHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
+                },
+                onNavigateFavorites = { navController.navigate(Routes.misPromos(Routes.TAB_FAVORITES)) },
+                onNavigatePromos = { navController.navigate(Routes.EXPLORE) },
+                onNavigateCommunity = { navController.navigate(Routes.COMMUNITY) },
             )
         }
 

@@ -5,7 +5,6 @@ import com.example.klippr.preferences.domain.model.UserPreference
 import com.example.klippr.preferences.domain.model.UserPreferenceRequest
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFailsWith
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -69,11 +68,11 @@ class PreferenceStoreImplTest {
     fun updatePreference_withoutIdThrowsClearError() = runTest {
         val store = PreferenceStoreImpl(FakePreferenceWebService(emptyList())) { "consumer-1" }
 
-        val exception = assertFailsWith<IllegalStateException> {
+        val exception = runCatching {
             store.updatePreference(UserPreference.defaults("consumer-1"))
-        }
+        }.exceptionOrNull()
 
-        assertEquals("No se encontro la preferencia", exception.message)
+        assertEquals("No se encontro la preferencia", exception?.message)
     }
 
     private class FakePreferenceWebService(
