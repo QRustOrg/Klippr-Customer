@@ -4,7 +4,10 @@ import com.example.klippr.iam.application.usecase.GetCurrentUserUseCase
 import com.example.klippr.iam.data.store.AuthStore
 import com.example.klippr.iam.domain.model.Session
 import com.example.klippr.iam.domain.model.User
+import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
+import com.example.klippr.promotions.domain.model.PromotionCategory
+import com.example.klippr.promotions.domain.model.PromotionStatus
 import com.example.klippr.redemption.application.usecase.ConfirmRedemptionUseCase
 import com.example.klippr.redemption.application.usecase.GenerateRedemptionUseCase
 import com.example.klippr.redemption.application.usecase.GetConsumerRedemptionsUseCase
@@ -24,8 +27,10 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RedemptionViewModelTest {
@@ -54,6 +59,18 @@ class RedemptionViewModelTest {
         assertEquals(listOf("active-1"), viewModel.state.value.codes.map { it.id })
     }
 
+    @Test
+    fun generate_withExpiredPromotionDoesNotCallStoreAndShowsEligibilityError() = runTest(dispatcher) {
+        val store = FakeRedemptionStore()
+        val viewModel = viewModel(store)
+
+        viewModel.generate(promotion(endDate = Instant.EPOCH))
+        advanceUntilIdle()
+
+        assertFalse(store.generateCalled)
+        assertEquals("Esta promoción ya venció.", viewModel.state.value.error)
+    }
+
     private fun viewModel(store: RedemptionStore) = RedemptionViewModel(
         generateRedemption = GenerateRedemptionUseCase(store),
         getConsumerRedemptions = GetConsumerRedemptionsUseCase(store),
@@ -66,8 +83,12 @@ class RedemptionViewModelTest {
         private val active = code("active-1", RedemptionStatus.ACTIVE)
         private val redeemed = code("redeemed-1", RedemptionStatus.REDEEMED)
         private val expired = code("expired-1", RedemptionStatus.EXPIRED)
+        var generateCalled = false
 
-        override suspend fun generate(consumerId: String, promotion: Promotion): RedemptionCode = active
+        override suspend fun generate(consumerId: String, promotion: Promotion): RedemptionCode {
+            generateCalled = true
+            return active
+        }
         override suspend fun getByConsumer(consumerId: String): List<RedemptionCode> =
             listOf(active, redeemed, expired)
         override suspend fun getById(id: String): RedemptionCode = active
@@ -88,6 +109,35 @@ class RedemptionViewModelTest {
 }
 
 private val user = User(userId = "consumer-1", email = "user@test.com", role = "Consumer")
+
+private fun promotion(
+    endDate: Instant = Instant.now().plusSeconds(86_400),
+    status: PromotionStatus = PromotionStatus.PUBLISHED,
+    availableRedemptions: Int = 10,
+    currentRedemptions: Int = 0,
+) = Promotion(
+    id = "promo-1",
+    businessId = "business-1",
+    title = "Promo",
+    description = "Promo test",
+    discountValue = 10.0,
+    discountType = DiscountType.PERCENTAGE,
+    status = status,
+    imageUrl = null,
+    imageKey = null,
+    termsAndConditions = null,
+    availableRedemptions = availableRedemptions,
+    currentRedemptions = currentRedemptions,
+    startDate = Instant.EPOCH,
+    endDate = endDate,
+    createdAt = Instant.EPOCH,
+    updatedAt = null,
+    isFavorite = false,
+    category = PromotionCategory.OTHER,
+    locationName = null,
+    businessName = "Negocio",
+    rating = null,
+)
 
 private fun code(id: String, status: RedemptionStatus) = RedemptionCode(
     id = id,

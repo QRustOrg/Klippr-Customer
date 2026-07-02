@@ -63,6 +63,7 @@ import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
+import com.example.klippr.redemption.domain.model.redemptionBlockedMessage
 import com.example.klippr.redemption.util.formatVence
 import com.example.klippr.shared.presentation.component.discountLabel
 import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
@@ -154,6 +155,8 @@ private fun PromotionDetailContent(
     onNavigateToReviews: () -> Unit,
 ) {
     var accepted by remember(promotion.id) { mutableStateOf(false) }
+    val blockedMessage = promotion.redemptionBlockedMessage()
+    val visibleError = errorMessage ?: blockedMessage
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -278,10 +281,10 @@ private fun PromotionDetailContent(
                     )
                 }
 
-                if (errorMessage != null) {
+                if (visibleError != null) {
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        text = errorMessage,
+                        text = visibleError,
                         color = Color(0xFFD3503F),
                         fontSize = 13.sp,
                         modifier = Modifier.fillMaxWidth(),
@@ -292,7 +295,7 @@ private fun PromotionDetailContent(
 
         BottomActionBar(
             discountLabel = discountLabel(promotion.discountType, promotion.discountValue),
-            enabled = accepted && !isGenerating,
+            enabled = accepted && !isGenerating && blockedMessage == null,
             isGenerating = isGenerating,
             onApplyDiscount = { onApplyDiscount(promotion) },
             modifier = Modifier.align(Alignment.BottomCenter),

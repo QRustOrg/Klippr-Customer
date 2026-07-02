@@ -6,6 +6,7 @@ import com.example.klippr.iam.application.usecase.GetCurrentUserUseCase
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.domain.model.RedemptionStatus
+import com.example.klippr.redemption.domain.model.redemptionBlockedMessage
 import com.example.klippr.redemption.application.usecase.ConfirmRedemptionUseCase
 import com.example.klippr.redemption.application.usecase.GenerateRedemptionUseCase
 import com.example.klippr.redemption.application.usecase.GetConsumerRedemptionsUseCase
@@ -53,6 +54,10 @@ class RedemptionViewModel(
     /** US-04: genera el código de [promotion]; deja el resultado en `generated`. */
     fun generate(promotion: Promotion) {
         viewModelScope.launch {
+            promotion.redemptionBlockedMessage()?.let { message ->
+                _state.update { it.copy(isGenerating = false, error = message, generated = null) }
+                return@launch
+            }
             val consumerId = getCurrentUser()?.userId
             if (consumerId == null) {
                 _state.update { it.copy(error = "Sesión no encontrada") }
