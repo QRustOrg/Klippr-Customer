@@ -25,6 +25,7 @@ import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.notification.domain.model.NotificationType
 import com.example.klippr.notification.presentation.view.NotificationScreen
 import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
+import com.example.klippr.preferences.presentation.viewmodel.PreferenceViewModel
 import com.example.klippr.profile.presentation.views.ProfileScreen
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.presentation.view.ExploreScreen
@@ -34,12 +35,14 @@ import com.example.klippr.redemption.presentation.view.MisPromosScreen
 import com.example.klippr.redemption.presentation.view.QrCodeScreen
 import com.example.klippr.redemption.presentation.view.RedemptionSuccessScreen
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
+import com.example.klippr.settings.presentation.view.SettingsDetailScreen
 import com.example.klippr.settings.presentation.view.SettingsScreen
 
 @Composable
 fun AppNavGraph(
     authViewModel: AuthViewModel,
     profileViewModel: ProfileViewModel,
+    preferenceViewModel: PreferenceViewModel,
     viewModel: PromotionViewModel,
     redemptionViewModel: RedemptionViewModel,
     communityViewModel: CommunityViewModel,          // ← nuevo
@@ -122,10 +125,21 @@ fun AppNavGraph(
 
         composable(Routes.SETTINGS) {
             SettingsScreen(
-                viewModel = profileViewModel,
                 onBack              = { navController.popBackStack() },
                 onNavigateToProfile = { navController.navigate(Routes.PROFILE) },
+                onNavigateToDetail  = { section -> navController.navigate(Routes.settingsDetail(section)) },
                 onLogout            = logout,
+            )
+        }
+
+        composable(
+            route = Routes.SETTINGS_DETAIL,
+            arguments = listOf(navArgument(Routes.ARG_SETTINGS_SECTION) { type = NavType.StringType }),
+        ) { backStackEntry ->
+            SettingsDetailScreen(
+                sectionKey = backStackEntry.arguments?.getString(Routes.ARG_SETTINGS_SECTION).orEmpty(),
+                viewModel = preferenceViewModel,
+                onBack = { navController.popBackStack() },
             )
         }
 

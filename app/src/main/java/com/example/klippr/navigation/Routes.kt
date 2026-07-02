@@ -11,6 +11,7 @@ object Routes {
     const val RESET_PASSWORD = "reset_password"
     const val HOME = "home"
     const val SETTINGS = "settings"
+    const val SETTINGS_DETAIL = "settings_detail/{section}"
     const val PROFILE = "profile"
     const val EXPLORE = "explore"
     const val MIS_PROMOS = "mis_promos"
@@ -26,6 +27,7 @@ object Routes {
     const val REDEMPTION_SUCCESS = "redemption_success/{redemptionId}"
 
     fun promotionDetail(promotionId: String) = "promotion_detail/$promotionId"
+    fun settingsDetail(section: String) = "settings_detail/$section"
     fun qrCode(redemptionId: String) = "qr_code/$redemptionId"
     fun redemptionSuccess(redemptionId: String) = "redemption_success/$redemptionId"
     fun misPromos(tab: String) = "mis_promos?tab=$tab"
@@ -33,6 +35,7 @@ object Routes {
         if (promotionId != null) "community?promotionId=$promotionId" else "community"
 
     const val ARG_PROMOTION_ID = "promotionId"
+    const val ARG_SETTINGS_SECTION = "section"
     const val ARG_REDEMPTION_ID = "redemptionId"
     const val ARG_TAB = "tab"
     const val TAB_FAVORITES = "favorites"

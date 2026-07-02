@@ -9,6 +9,7 @@ import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
 import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
+import com.example.klippr.preferences.presentation.viewmodel.PreferenceViewModel
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
 
     private val authViewModel: AuthViewModel by viewModels { AuthViewModel.Factory(serviceLocator) }
     private val profileViewModel: ProfileViewModel by viewModels { ProfileViewModel.Factory(serviceLocator) }
+    private val preferenceViewModel: PreferenceViewModel by viewModels { PreferenceViewModel.Factory(serviceLocator) }
     private val promotionViewModel: PromotionViewModel by viewModels { PromotionViewModel.Factory(serviceLocator) }
     private val redemptionViewModel: RedemptionViewModel by viewModels { RedemptionViewModel.Factory(serviceLocator) }
     private val communityViewModel: CommunityViewModel by viewModels { CommunityViewModel.Factory(serviceLocator) }
@@ -42,6 +44,7 @@ class MainActivity : ComponentActivity() {
                 MainNavHost(
                     authViewModel = authViewModel,
                     profileViewModel = profileViewModel,
+                    preferenceViewModel = preferenceViewModel,
                     promotionViewModel = promotionViewModel,
                     redemptionViewModel = redemptionViewModel,
                     communityViewModel = communityViewModel,

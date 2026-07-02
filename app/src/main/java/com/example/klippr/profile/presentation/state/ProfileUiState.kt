@@ -1,6 +1,5 @@
 package com.example.klippr.profile.presentation.state
 
-import com.example.klippr.profile.domain.model.UserPreference
 import com.example.klippr.profile.domain.model.UserProfile
 import com.example.klippr.redemption.domain.model.RedemptionCode
 
@@ -8,13 +7,10 @@ import com.example.klippr.redemption.domain.model.RedemptionCode
 /** Estado del centro de cuenta. */
 data class ProfileUiState(
     val isLoading: Boolean = false,
-    val isSavingPreference: Boolean = false,
     val profile: UserProfile? = null,
-    val preference: UserPreference? = null,
     val stats: ProfileStats = ProfileStats(),
     val latestRedemptions: List<RedemptionCode> = emptyList(),
     val error: String? = null,
-    val preferenceError: String? = null,
     val activityError: String? = null,
     val profileSaveMessage: String? = null,
 )

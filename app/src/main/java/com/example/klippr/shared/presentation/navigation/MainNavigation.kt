@@ -5,9 +5,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.klippr.community.presentation.navigation.CommunityRoutes
 import com.example.klippr.community.presentation.navigation.communityGraph
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
@@ -18,6 +20,7 @@ import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.notification.presentation.navigation.NotificationRoutes
 import com.example.klippr.notification.presentation.navigation.notificationGraph
 import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
+import com.example.klippr.preferences.presentation.viewmodel.PreferenceViewModel
 import com.example.klippr.profile.presentation.navigation.ProfileRoutes
 import com.example.klippr.profile.presentation.navigation.profileGraph
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
@@ -30,7 +33,8 @@ import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.shared.data.store.SessionDataStore
 import com.example.klippr.shared.presentation.views.SplashScreen
 import com.example.klippr.shared.presentation.views.home.HomeScreen
-import com.example.klippr.shared.presentation.views.settings.SettingsScreen
+import com.example.klippr.settings.presentation.view.SettingsDetailScreen
+import com.example.klippr.settings.presentation.view.SettingsScreen
 
 /**
  * Host de navegacion principal. Compone el grafo de cada bounded context y las pantallas
@@ -43,6 +47,7 @@ import com.example.klippr.shared.presentation.views.settings.SettingsScreen
 fun MainNavHost(
     authViewModel: AuthViewModel,
     profileViewModel: ProfileViewModel,
+    preferenceViewModel: PreferenceViewModel,
     promotionViewModel: PromotionViewModel,
     redemptionViewModel: RedemptionViewModel,
     communityViewModel: CommunityViewModel,
@@ -102,7 +107,19 @@ fun MainNavHost(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToProfile = { navController.navigate(ProfileRoutes.PROFILE) },
+                onNavigateToDetail = { section -> navController.navigate(MainRoutes.settingsDetail(section)) },
                 onLogout = logout,
+            )
+        }
+
+        composable(
+            route = MainRoutes.SETTINGS_DETAIL,
+            arguments = listOf(navArgument(MainRoutes.ARG_SETTINGS_SECTION) { type = NavType.StringType }),
+        ) { backStackEntry ->
+            SettingsDetailScreen(
+                sectionKey = backStackEntry.arguments?.getString(MainRoutes.ARG_SETTINGS_SECTION).orEmpty(),
+                viewModel = preferenceViewModel,
+                onBack = { navController.popBackStack() },
             )
         }
 
