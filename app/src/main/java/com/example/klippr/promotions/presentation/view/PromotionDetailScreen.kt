@@ -635,10 +635,14 @@ private fun buildSubtitle(category: PromotionCategory, location: String?, descri
     ).joinToString(" · ")
 }
 
-private fun redemptionsLabel(promotion: Promotion): String {
+internal fun redemptionsLabel(promotion: Promotion): String {
     if (promotion.availableRedemptions == Int.MAX_VALUE) return "Canjes ilimitados disponibles"
     val remaining = (promotion.availableRedemptions - promotion.currentRedemptions).coerceAtLeast(0)
-    return "$remaining disponibles"
+    return when (remaining) {
+        0 -> "Sin canjes disponibles"
+        1 -> "1 canje disponible"
+        else -> "$remaining canjes disponibles"
+    }
 }
 
 private fun sharePromotion(context: Context, promotion: Promotion, businessDisplayName: String) {
