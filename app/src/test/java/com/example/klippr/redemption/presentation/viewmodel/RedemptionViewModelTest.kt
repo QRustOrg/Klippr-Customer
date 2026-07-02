@@ -71,6 +71,17 @@ class RedemptionViewModelTest {
         assertEquals("Esta promoción ya venció.", viewModel.state.value.error)
     }
 
+    @Test
+    fun markRedeemed_withBackendValidationTitleShowsFriendlyConfirmationError() = runTest(dispatcher) {
+        val store = FakeRedemptionStore(confirmError = IllegalStateException("One or more validation errors occurred."))
+        val viewModel = viewModel(store)
+
+        viewModel.markRedeemed(code("active-1", RedemptionStatus.ACTIVE))
+        advanceUntilIdle()
+
+        assertEquals("No se pudo confirmar el canje. Inténtalo nuevamente.", viewModel.state.value.error)
+    }
+
     private fun viewModel(store: RedemptionStore) = RedemptionViewModel(
         generateRedemption = GenerateRedemptionUseCase(store),
         getConsumerRedemptions = GetConsumerRedemptionsUseCase(store),
@@ -79,7 +90,9 @@ class RedemptionViewModelTest {
         getCurrentUser = GetCurrentUserUseCase(FakeAuthStore()),
     )
 
-    private class FakeRedemptionStore : RedemptionStore {
+    private class FakeRedemptionStore(
+        private val confirmError: Exception? = null,
+    ) : RedemptionStore {
         private val active = code("active-1", RedemptionStatus.ACTIVE)
         private val redeemed = code("redeemed-1", RedemptionStatus.REDEEMED)
         private val expired = code("expired-1", RedemptionStatus.EXPIRED)
@@ -92,7 +105,10 @@ class RedemptionViewModelTest {
         override suspend fun getByConsumer(consumerId: String): List<RedemptionCode> =
             listOf(active, redeemed, expired)
         override suspend fun getById(id: String): RedemptionCode = active
-        override suspend fun confirm(code: RedemptionCode): RedemptionCode = redeemed
+        override suspend fun confirm(code: RedemptionCode): RedemptionCode {
+            confirmError?.let { throw it }
+            return redeemed
+        }
     }
 
     private class FakeAuthStore : AuthStore {

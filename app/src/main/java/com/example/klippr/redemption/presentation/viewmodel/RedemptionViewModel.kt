@@ -90,7 +90,7 @@ class RedemptionViewModel(
                 _state.update { it.copy(isGenerating = false) }
                 loadHistory()
             } catch (e: Exception) {
-                _state.update { it.copy(isGenerating = false, error = e.message ?: "Error al confirmar canje") }
+                _state.update { it.copy(isGenerating = false, error = e.confirmRedemptionMessage()) }
             }
         }
     }
@@ -160,4 +160,13 @@ class RedemptionViewModel(
             }
     }
 
+}
+
+private fun Exception.confirmRedemptionMessage(): String {
+    val rawMessage = message
+    return if (rawMessage == "One or more validation errors occurred.") {
+        "No se pudo confirmar el canje. Inténtalo nuevamente."
+    } else {
+        rawMessage ?: "Error al confirmar canje"
+    }
 }
