@@ -100,6 +100,7 @@ fun MainNavHost(
                 onNavigateToCommunity = { navController.navigate(CommunityRoutes.COMMUNITY) },
                 onNavigateToQr = { id -> navController.navigate(RedemptionRoutes.redemptionSuccess(id)) },
                 onNavigateToNotifications = { navController.navigate(NotificationRoutes.NOTIFICATIONS) },
+                onNavigateToPromotionDetail = { id -> navController.navigate(PromotionRoutes.promotionDetail(id)) },
             )
         }
 

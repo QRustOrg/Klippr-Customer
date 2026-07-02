@@ -35,6 +35,19 @@ class ReviewRepositoryImplTest {
         assertEquals("Tu sesión expiró. Inicia sesión nuevamente.", exception?.message)
     }
 
+    @Test
+    fun toggleLike_callsReviewLikeEndpointAndRefreshesCache() = runBlocking {
+        val api = TrackingReviewApiService()
+        val dao = NoopReviewDao()
+        val repository = ReviewRepositoryImpl(api, dao)
+
+        val result = repository.toggleLike("review-1")
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf("review-1"), api.toggleLikeCalls)
+        assertEquals(1, api.getAllCalls)
+    }
+
     private class UnauthorizedReviewApiService : ReviewApiService {
         override suspend fun getAll(): List<ReviewDto> = emptyList()
         override suspend fun getByPromotion(promotionId: String): List<ReviewDto> = emptyList()
@@ -44,6 +57,25 @@ class ReviewRepositoryImplTest {
         }
         override suspend fun canUserReview(promotionId: String, userId: String): Boolean = false
         override suspend fun toggleLike(reviewId: String) = Unit
+        override suspend fun getComments(reviewId: String): List<CommentDto> = emptyList()
+        override suspend fun postComment(reviewId: String, request: PostCommentRequest) = Unit
+    }
+
+    private class TrackingReviewApiService : ReviewApiService {
+        val toggleLikeCalls = mutableListOf<String>()
+        var getAllCalls = 0
+
+        override suspend fun getAll(): List<ReviewDto> {
+            getAllCalls += 1
+            return emptyList()
+        }
+        override suspend fun getByPromotion(promotionId: String): List<ReviewDto> = emptyList()
+        override suspend fun getByUser(userId: String): List<ReviewDto> = emptyList()
+        override suspend fun postReview(request: PostReviewRequest): ReviewDto = error("unused")
+        override suspend fun canUserReview(promotionId: String, userId: String): Boolean = false
+        override suspend fun toggleLike(reviewId: String) {
+            toggleLikeCalls += reviewId
+        }
         override suspend fun getComments(reviewId: String): List<CommentDto> = emptyList()
         override suspend fun postComment(reviewId: String, request: PostCommentRequest) = Unit
     }

@@ -3,7 +3,7 @@ package com.example.klippr.redemption.domain.model
 import com.google.gson.annotations.SerializedName
 
 // @author Samuel Bonifacio
-/** Cuerpo de POST /api/redemptions (generar código de canje). */
+/** Cuerpo de POST /api/redemptions (generar redención y QR de canje; TS-01). */
 data class RedeemPromotionRequest(
     @SerializedName("consumerId")            val consumerId: String,
     @SerializedName("businessId")            val businessId: String,

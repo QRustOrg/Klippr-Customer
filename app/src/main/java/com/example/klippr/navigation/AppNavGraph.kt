@@ -120,6 +120,7 @@ fun AppNavGraph(
                 onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
                 onNavigateToQr        = { id -> navController.navigate(Routes.redemptionSuccess(id)) },
                 onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                onNavigateToPromotionDetail = { id -> navController.navigate(Routes.promotionDetail(id)) },
             )
         }
 
