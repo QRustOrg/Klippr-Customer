@@ -15,7 +15,7 @@ import retrofit2.converter.gson.GsonConverterFactory
  */
 object ApiClient {
 
-    private const val BASE_URL = "https://klippr-backend-production.up.railway.app/"
+    private const val BASE_URL = "https://klippr-backend.onrender.com/"
 
     private lateinit var sessionStore: SessionDataStore
 
