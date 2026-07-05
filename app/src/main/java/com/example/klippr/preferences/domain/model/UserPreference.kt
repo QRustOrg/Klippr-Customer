@@ -1,4 +1,4 @@
-package com.example.klippr.profile.domain.model
+package com.example.klippr.preferences.domain.model
 
 import com.google.gson.annotations.SerializedName
 
@@ -21,7 +21,7 @@ data class UserPreference(
             userId = userId,
             darkMode = false,
             languageCode = "es",
-            timezone = "America/Bogota",
+            timezone = "America/Lima",
             emailNotifications = true,
             pushNotifications = true,
             smsNotifications = false,

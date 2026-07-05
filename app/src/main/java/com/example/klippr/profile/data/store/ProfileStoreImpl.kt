@@ -1,16 +1,14 @@
 package com.example.klippr.profile.data.store
 
 import com.example.klippr.profile.data.network.ProfileWebService
-import com.example.klippr.profile.domain.model.UserPreference
 import com.example.klippr.profile.domain.model.UserProfile
 import com.example.klippr.profile.domain.model.UserResource
-import com.example.klippr.profile.domain.model.toRequest
 import com.example.klippr.shared.data.network.safeApiCall
 import com.example.klippr.shared.data.store.SessionDataStore
 import kotlinx.coroutines.flow.first
 
 // @author Samuel Bonifacio
-/** Implementa perfil y preferencias para el usuario autenticado. */
+/** Implementa perfil para el usuario autenticado. */
 class ProfileStoreImpl(
     private val webService: ProfileWebService,
     private val sessionStore: SessionDataStore,
@@ -19,20 +17,6 @@ class ProfileStoreImpl(
     override suspend fun getCurrentProfile(): UserProfile {
         val session = currentSession()
         return safeApiCall { webService.getUser(session.user.userId) }.toDomain()
-    }
-
-    override suspend fun getCurrentPreference(): UserPreference? {
-        val userId = currentSession().user.userId
-        return safeApiCall { webService.getPreferences() }
-            .firstOrNull { it.userId == userId }
-    }
-
-    override suspend fun createPreference(preference: UserPreference): UserPreference =
-        safeApiCall { webService.createPreference(preference.toRequest()) }
-
-    override suspend fun updatePreference(preference: UserPreference): UserPreference {
-        val id = preference.id ?: throw IllegalStateException("No se encontro la preferencia")
-        return safeApiCall { webService.updatePreference(id, preference.toRequest()) }
     }
 
     private suspend fun currentSession() = sessionStore.session.first()

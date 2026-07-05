@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.iam.data.store.AuthStore
 import com.example.klippr.profile.data.store.ProfileStore
-import com.example.klippr.profile.domain.model.UserPreference
 import com.example.klippr.profile.presentation.state.ProfileStats
 import com.example.klippr.profile.presentation.state.ProfileUiState
 import com.example.klippr.redemption.data.store.RedemptionStore
@@ -33,50 +32,24 @@ class ProfileViewModel(
 
     fun load() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null, preferenceError = null, activityError = null) }
+            _state.update { it.copy(isLoading = true, error = null, activityError = null) }
             try {
                 val profile = profileStore.getCurrentProfile()
                 val userId = authStore.currentUser()?.userId ?: profile.userId
-                val preferenceResult = runCatching {
-                    profileStore.getCurrentPreference()
-                        ?: profileStore.createPreference(UserPreference.defaults(userId))
-                }
                 val redemptionsResult = runCatching { redemptionStore.getByConsumer(userId) }
                 val redemptions = redemptionsResult.getOrElse { emptyList() }
                 _state.update {
                     it.copy(
                         isLoading = false,
                         profile = profile,
-                        preference = preferenceResult.getOrNull(),
                         stats = redemptions.toStats(),
                         latestRedemptions = redemptions.take(3),
-                        preferenceError = preferenceResult.exceptionOrNull()?.message
-                            ?: it.preferenceError,
                         activityError = redemptionsResult.exceptionOrNull()?.message,
                     )
                 }
             } catch (e: Exception) {
                 _state.update {
                     it.copy(isLoading = false, error = e.message ?: "No se pudo cargar el perfil")
-                }
-            }
-        }
-    }
-
-    fun savePreference(preference: UserPreference) {
-        viewModelScope.launch {
-            _state.update { it.copy(isSavingPreference = true, preferenceError = null) }
-            try {
-                val saved = profileStore.updatePreference(preference)
-                _state.update {
-                    it.copy(isSavingPreference = false, preference = saved)
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        isSavingPreference = false,
-                        preferenceError = e.message ?: "No se pudieron guardar las preferencias",
-                    )
                 }
             }
         }

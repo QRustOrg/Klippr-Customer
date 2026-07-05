@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.outlined.RateReview
@@ -28,11 +30,9 @@ import coil.compose.AsyncImage
 import com.example.klippr.community.domain.model.Review
 import com.example.klippr.community.domain.model.ReviewComment
 import com.example.klippr.community.presentation.viewmodel.CommunityViewModel
-import com.example.klippr.favorites.domain.model.Favorite as FavoritePromotion
 import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.shared.presentation.components.KlipprBottomBar
 import com.example.klippr.shared.presentation.components.KlipprTab
-import com.example.klippr.shared.presentation.components.RemoteFavoriteHeartButton
 import com.example.klippr.shared.presentation.components.rememberPromoDrawableId
 import com.example.klippr.shared.presentation.theme.KlipprPurple
 import java.text.SimpleDateFormat
@@ -55,19 +55,9 @@ fun CommunityScreen(
     onNavigateMisPromos: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val favoriteState by favoriteViewModel.state.collectAsState()
-    val favoriteByPromotion = remember(favoriteState.visibleFavorites) {
-        favoriteByPromotionId(favoriteState.visibleFavorites)
-    }
 
     LaunchedEffect(promotionId) {
         viewModel.setPromotionFilter(promotionId)
-    }
-
-    LaunchedEffect(currentUserId) {
-        if (currentUserId.isNotBlank()) {
-            favoriteViewModel.loadFavorites(currentUserId)
-        }
     }
 
     if (uiState.isReviewSheetOpen) {
@@ -141,11 +131,9 @@ fun CommunityScreen(
                     ReviewFeed(
                         reviews = uiState.reviews,
                         commentsByReviewId = uiState.commentsByReviewId,
-                        favoriteByPromotionId = favoriteByPromotion,
-                        favoriteViewModel = favoriteViewModel,
-                        currentUserId = currentUserId,
                         promotionId = promotionId,
                         onComment = viewModel::openCommentSheet,
+                        onReaction = viewModel::toggleLike,
                     )
                 }
             }
@@ -171,11 +159,9 @@ fun CommunityScreen(
 private fun ReviewFeed(
     reviews: List<Review>,
     commentsByReviewId: Map<String, List<ReviewComment>>,
-    favoriteByPromotionId: Map<String, FavoritePromotion>,
-    favoriteViewModel: FavoriteViewModel,
-    currentUserId: String,
     promotionId: String?,
     onComment: (Review) -> Unit,
+    onReaction: (String) -> Unit,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -194,10 +180,8 @@ private fun ReviewFeed(
             ReviewCard(
                 review = review,
                 commentCount = commentsByReviewId[review.id]?.size,
-                isFavorite = favoriteByPromotionId.containsKey(review.promotionId),
-                favoriteViewModel = favoriteViewModel,
-                currentUserId = currentUserId,
                 onComment = { onComment(review) },
+                onReaction = { onReaction(review.id) },
             )
         }
         item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -209,10 +193,8 @@ private fun ReviewFeed(
 private fun ReviewCard(
     review: Review,
     commentCount: Int?,
-    isFavorite: Boolean,
-    favoriteViewModel: FavoriteViewModel,
-    currentUserId: String,
     onComment: () -> Unit,
+    onReaction: () -> Unit,
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -300,19 +282,40 @@ private fun ReviewCard(
                         color = KlipprPurple,
                     )
                 }
-                RemoteFavoriteHeartButton(
-                    userId = currentUserId,
-                    promotionId = review.promotionId,
-                    isFavorite = isFavorite,
-                    favoriteViewModel = favoriteViewModel,
-                    selectedTint = LikePink,
-                    unselectedTint = Color.Gray,
-                    modifier = Modifier.size(32.dp),
-                )
+                val reaction = reviewReactionContent(review)
+                TextButton(onClick = onReaction) {
+                    Icon(
+                        imageVector = if (reaction.selected) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = "Reaccionar",
+                        tint = if (reaction.selected) LikePink else Color.Gray,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = reaction.label,
+                        fontSize = 12.sp,
+                        color = if (reaction.selected) LikePink else Color.Gray,
+                    )
+                }
             }
         }
     }
 }
+
+data class ReviewReactionContent(
+    val label: String,
+    val selected: Boolean,
+)
+
+fun reviewReactionContent(review: Review): ReviewReactionContent =
+    ReviewReactionContent(
+        label = when {
+            review.likeCount > 0 -> review.likeCount.toString()
+            review.isLikedByCurrentUser -> "Reaccionaste"
+            else -> "Reaccionar"
+        },
+        selected = review.isLikedByCurrentUser,
+    )
 
 // ─── Avatar circular con inicial ─────────────────────────────────────────────
 @Composable

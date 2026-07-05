@@ -4,7 +4,6 @@ import com.example.klippr.iam.data.store.AuthStore
 import com.example.klippr.iam.domain.model.Session
 import com.example.klippr.iam.domain.model.User
 import com.example.klippr.profile.data.store.ProfileStore
-import com.example.klippr.profile.domain.model.UserPreference
 import com.example.klippr.profile.domain.model.UserProfile
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.redemption.data.store.RedemptionStore
@@ -45,7 +44,7 @@ class ProfileViewModelTest {
     @Test
     fun load_buildsAccountCenterState() = runTest(dispatcher) {
         val viewModel = ProfileViewModel(
-            profileStore = FakeProfileStore(existingPreference = preference("consumer-1")),
+            profileStore = FakeProfileStore(),
             redemptionStore = FakeRedemptionStore(),
             authStore = FakeAuthStore(),
         )
@@ -54,7 +53,6 @@ class ProfileViewModelTest {
 
         val state = viewModel.state.value
         assertEquals("Samuel Bonifacio", state.profile?.fullName)
-        assertEquals("es", state.preference?.languageCode)
         assertEquals(3, state.stats.totalRedemptions)
         assertEquals(1, state.stats.activeRedemptions)
         assertEquals(2, state.stats.redeemedRedemptions)
@@ -63,66 +61,9 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun load_createsDefaultPreferenceWhenMissing() = runTest(dispatcher) {
-        val store = FakeProfileStore(existingPreference = null)
-
-        ProfileViewModel(
-            profileStore = store,
-            redemptionStore = FakeRedemptionStore(),
-            authStore = FakeAuthStore(),
-        )
-        advanceUntilIdle()
-
-        assertEquals("consumer-1", store.createdPreference?.userId)
-        assertEquals("es", store.createdPreference?.languageCode)
-        assertEquals("America/Bogota", store.createdPreference?.timezone)
-        assertEquals(false, store.createdPreference?.smsNotifications)
-        assertEquals("private", store.createdPreference?.profileVisibility)
-    }
-
-    @Test
-    fun savePreference_updatesBackendAndState() = runTest(dispatcher) {
-        val store = FakeProfileStore(existingPreference = preference("consumer-1"))
-        val viewModel = ProfileViewModel(
-            profileStore = store,
-            redemptionStore = FakeRedemptionStore(),
-            authStore = FakeAuthStore(),
-        )
-        advanceUntilIdle()
-
-        viewModel.savePreference(
-            store.preference!!.copy(
-                languageCode = "en",
-                pushNotifications = false,
-                profileVisibility = "public",
-            )
-        )
-        advanceUntilIdle()
-
-        assertEquals("en", viewModel.state.value.preference?.languageCode)
-        assertEquals(false, viewModel.state.value.preference?.pushNotifications)
-        assertEquals("public", store.savedPreference?.profileVisibility)
-    }
-
-    @Test
-    fun load_keepsProfileVisibleWhenPreferenceLoadFails() = runTest(dispatcher) {
-        val viewModel = ProfileViewModel(
-            profileStore = FakeProfileStore(existingPreference = preference("consumer-1"), failPreferences = true),
-            redemptionStore = FakeRedemptionStore(),
-            authStore = FakeAuthStore(),
-        )
-
-        advanceUntilIdle()
-
-        assertNotNull(viewModel.state.value.profile)
-        assertNull(viewModel.state.value.error)
-        assertEquals("Error 500", viewModel.state.value.preferenceError)
-    }
-
-    @Test
     fun load_keepsProfileVisibleWhenRedemptionLoadFails() = runTest(dispatcher) {
         val viewModel = ProfileViewModel(
-            profileStore = FakeProfileStore(existingPreference = preference("consumer-1")),
+            profileStore = FakeProfileStore(),
             redemptionStore = FakeRedemptionStore(failHistory = true),
             authStore = FakeAuthStore(),
         )
@@ -135,17 +76,7 @@ class ProfileViewModelTest {
         assertEquals("Error 500", viewModel.state.value.activityError)
     }
 
-    private class FakeProfileStore(
-        existingPreference: UserPreference?,
-        private val failPreferences: Boolean = false,
-    ) : ProfileStore {
-        var preference: UserPreference? = existingPreference
-            private set
-        var createdPreference: UserPreference? = null
-            private set
-        var savedPreference: UserPreference? = null
-            private set
-
+    private class FakeProfileStore : ProfileStore {
         override suspend fun getCurrentProfile(): UserProfile = UserProfile(
             userId = "consumer-1",
             email = "samuel@test.com",
@@ -155,24 +86,6 @@ class ProfileViewModelTest {
             isActive = true,
             memberSince = "11/06/2026",
         )
-
-        override suspend fun getCurrentPreference(): UserPreference? {
-            if (failPreferences) throw IllegalStateException("Error 500")
-            return preference
-        }
-
-        override suspend fun createPreference(preference: UserPreference): UserPreference {
-            if (failPreferences) throw IllegalStateException("Error 500")
-            createdPreference = preference.copy(id = 7)
-            this.preference = createdPreference
-            return createdPreference!!
-        }
-
-        override suspend fun updatePreference(preference: UserPreference): UserPreference {
-            savedPreference = preference
-            this.preference = preference
-            return preference
-        }
     }
 
     private class FakeRedemptionStore(private val failHistory: Boolean = false) : RedemptionStore {
@@ -206,8 +119,6 @@ class ProfileViewModelTest {
 }
 
 private val user = User(userId = "consumer-1", email = "samuel@test.com", role = "CONSUMER")
-
-private fun preference(userId: String) = UserPreference.defaults(userId).copy(id = 5)
 
 private fun code(id: String, status: RedemptionStatus) = RedemptionCode(
     id = id,

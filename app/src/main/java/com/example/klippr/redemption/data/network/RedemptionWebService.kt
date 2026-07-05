@@ -9,9 +9,15 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 
 // @author Samuel Bonifacio
-/** Contrato Retrofit para el BC Redemption. Requiere token (endpoints autenticados). */
+/**
+ * Contrato Retrofit para el BC Redemption. Requiere token (endpoints autenticados).
+ *
+ * TS-01: `POST /api/redemptions` es la API oficial de generación de QR de canje:
+ * el backend crea la redención y devuelve el token/qrContent que la UI renderiza como bitmap.
+ */
 interface RedemptionWebService {
 
+    /** Genera la redención y el contenido escaneable del QR para una promoción. */
     @POST("api/redemptions")
     suspend fun generate(@Body body: RedeemPromotionRequest): RedemptionResource
 

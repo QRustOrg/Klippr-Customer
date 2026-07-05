@@ -10,6 +10,7 @@ import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.domain.model.RedemptionResource
 import com.example.klippr.redemption.domain.model.RedemptionStatus
 import com.example.klippr.shared.data.network.safeApiCall
+import java.time.Instant
 
 
 // @author Samuel Bonifacio
@@ -52,7 +53,7 @@ class RedemptionStoreImpl(
     override suspend fun confirm(code: RedemptionCode): RedemptionCode {
         val request = ConfirmRedemptionRequest(
             businessId = code.businessId.orEmpty(),
-            confirmedAt = System.currentTimeMillis().toString(),
+            confirmedAt = Instant.now().toString(),
         )
         return toDomain(safeApiCall { webService.confirm(code.id, request) })
     }

@@ -13,6 +13,9 @@ import com.example.klippr.iam.data.store.AuthStore
 import com.example.klippr.iam.data.store.AuthStoreImpl
 import com.example.klippr.notification.data.store.NotificationStore
 import com.example.klippr.notification.data.store.NotificationStoreImpl
+import com.example.klippr.preferences.data.network.PreferenceWebService
+import com.example.klippr.preferences.data.store.PreferenceStore
+import com.example.klippr.preferences.data.store.PreferenceStoreImpl
 import com.example.klippr.profile.data.network.ProfileWebService
 import com.example.klippr.profile.data.store.ProfileStore
 import com.example.klippr.profile.data.store.ProfileStoreImpl
@@ -55,6 +58,7 @@ class ServiceLocator(context: Context) {
     // ── WebServices (Retrofit) ─────────────────────────────────────────────────
     private val authWebService: AuthWebService by lazy { ApiClient.create() }
     private val profileWebService: ProfileWebService by lazy { ApiClient.create() }
+    private val preferenceWebService: PreferenceWebService by lazy { ApiClient.create() }
     private val promotionWebService: PromotionWebService by lazy { ApiClient.create() }
     private val redemptionWebService: RedemptionWebService by lazy { ApiClient.create() }
     private val reviewWebService: ReviewWebService by lazy { ApiClient.create() }
@@ -63,6 +67,7 @@ class ServiceLocator(context: Context) {
     // ── Stores por bounded context (expuestos como interfaz) ───────────────────
     val authStore: AuthStore by lazy { AuthStoreImpl(authWebService, sessionStore) }
     val profileStore: ProfileStore by lazy { ProfileStoreImpl(profileWebService, sessionStore) }
+    val preferenceStore: PreferenceStore by lazy { PreferenceStoreImpl(preferenceWebService, sessionStore) }
     val promotionStore: PromotionStore by lazy {
         PromotionStoreImpl(db.promotionDao(), promotionWebService, profileWebService)
     }

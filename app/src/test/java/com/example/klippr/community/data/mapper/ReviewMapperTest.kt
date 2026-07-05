@@ -27,4 +27,29 @@ class ReviewMapperTest {
 
         assertEquals("", result.promotionImageUrl)
     }
+
+    @Test
+    fun toDomain_mapsReactionFields() {
+        val dto = ReviewDto(
+            id = "review-1",
+            promotionId = "promo-1",
+            promotionTitle = "Hamburguesas promo 2x1",
+            promotionImageUrl = null,
+            businessName = "Klippr Burger",
+            userId = "user-1",
+            userName = "Samuel Bonifacio",
+            userAvatarUrl = null,
+            rating = 5,
+            comment = "buena promocion",
+            createdAt = 1_718_000_000_000,
+            isVerifiedPurchase = true,
+            likeCount = 4,
+            likedByCurrentUser = true,
+        )
+
+        val result = dto.toDomain()
+
+        assertEquals(4, result.likeCount)
+        assertEquals(true, result.isLikedByCurrentUser)
+    }
 }
