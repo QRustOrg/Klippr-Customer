@@ -19,7 +19,7 @@ import retrofit2.converter.gson.GsonConverterFactory
  */
 class NetworkModule(sessionStore: SessionDataStore) {
 
-    private val baseUrl = "https://klippr-backend.onrender.com/"
+    private val baseUrl = "https://klippr-backend-8o4x.onrender.com/"
 
     private val client: OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(AuthInterceptor(sessionStore))

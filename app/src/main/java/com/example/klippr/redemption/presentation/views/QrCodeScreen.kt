@@ -1,6 +1,5 @@
 package com.example.klippr.redemption.presentation.views
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,14 +19,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.klippr.redemption.domain.model.RedemptionCode
 import com.example.klippr.redemption.util.formatVence
-import com.example.klippr.redemption.util.generateQrBitmap
 import com.example.klippr.shared.presentation.components.KlipprTopBar
 import com.example.klippr.shared.presentation.theme.KlipprPurple
 
@@ -123,7 +118,7 @@ fun QrCodeScreen(
 
             Spacer(Modifier.height(28.dp))
 
-            // QR grande escaneable
+            // QR grande escaneable, renderizado por la QR Server API (goqr.me)
             Box(
                 modifier = Modifier
                     .size(280.dp)
@@ -131,12 +126,7 @@ fun QrCodeScreen(
                     .background(Color.White),
                 contentAlignment = Alignment.Center,
             ) {
-                val qr = remember(code.qrContent) { generateQrBitmap(code.qrContent, 640) }
-                if (qr != null) {
-                    Image(bitmap = qr, contentDescription = "Código QR", modifier = Modifier.size(248.dp))
-                } else {
-                    Icon(Icons.Default.QrCode2, contentDescription = null, tint = Color(0xFF1A1A1A), modifier = Modifier.size(200.dp))
-                }
+                QrImage(content = code.qrContent, modifier = Modifier.size(248.dp), sizePx = 200)
             }
 
             Spacer(Modifier.height(24.dp))
