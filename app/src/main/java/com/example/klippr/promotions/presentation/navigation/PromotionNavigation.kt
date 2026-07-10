@@ -18,6 +18,7 @@ import com.example.klippr.promotions.presentation.views.PromotionDetailScreen
 import com.example.klippr.redemption.presentation.navigation.RedemptionRoutes
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.shared.data.store.SessionDataStore
+import com.example.klippr.shared.presentation.components.LocalKlipprToast
 import com.example.klippr.shared.presentation.navigation.MainRoutes
 
 /** Grafo de navegacion del bounded context Promotions (explorar + detalle). */
@@ -32,6 +33,7 @@ fun NavGraphBuilder.promotionGraph(
     composable(PromotionRoutes.EXPLORE) {
         val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
         val currentUserId = session?.user?.userId ?: ""
+        val toast = LocalKlipprToast.current
         ExploreScreen(
             viewModel = promotionViewModel,
             favoriteViewModel = favoriteViewModel,
@@ -43,6 +45,7 @@ fun NavGraphBuilder.promotionGraph(
             },
             onNavigateToCommunity = { navController.navigate(CommunityRoutes.COMMUNITY) },
             onNavigateToMisPromos = { navController.navigate(RedemptionRoutes.misPromos(RedemptionRoutes.TAB_FAVORITES)) },
+            onFavoriteToast = { title -> toast.showFavorite(title) },
         )
     }
 
@@ -56,6 +59,7 @@ fun NavGraphBuilder.promotionGraph(
         val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
         val currentUserId = session?.user?.userId ?: ""
         val favorite = favoriteState.visibleFavorites.firstOrNull { it.promotionId == promotionId }
+        val toast = LocalKlipprToast.current
 
         LaunchedEffect(currentUserId) {
             favoriteViewModel.loadFavorites(currentUserId)
@@ -63,6 +67,7 @@ fun NavGraphBuilder.promotionGraph(
 
         LaunchedEffect(redemptionState.generated) {
             redemptionState.generated?.let { code ->
+                toast.showRedemption(code.promotionTitle)
                 navController.navigate(RedemptionRoutes.redemptionSuccess(code.id))
                 notificationViewModel.notify(
                     type = NotificationType.REDEMPTION_GENERATED,
@@ -89,6 +94,8 @@ fun NavGraphBuilder.promotionGraph(
             isFavoriteOverride = favorite != null,
             onFavoriteSaved = { id ->
                 if (favorite == null) {
+                    val title = promotionViewModel.detailState.value.promotion?.title
+                    toast.showFavorite(title)
                     notificationViewModel.notify(
                         type = NotificationType.FAVORITE_ADDED,
                         title = "Guardado en favoritos",

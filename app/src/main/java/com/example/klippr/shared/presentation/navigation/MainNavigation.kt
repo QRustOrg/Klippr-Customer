@@ -1,8 +1,15 @@
 package com.example.klippr.shared.presentation.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -31,6 +38,9 @@ import com.example.klippr.redemption.presentation.navigation.RedemptionRoutes
 import com.example.klippr.redemption.presentation.navigation.redemptionGraph
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.shared.data.store.SessionDataStore
+import com.example.klippr.shared.presentation.components.KlipprToastHost
+import com.example.klippr.shared.presentation.components.LocalKlipprToast
+import com.example.klippr.shared.presentation.components.rememberKlipprToastHostState
 import com.example.klippr.shared.presentation.views.SplashScreen
 import com.example.klippr.shared.presentation.views.home.HomeScreen
 import com.example.klippr.settings.presentation.view.SettingsDetailScreen
@@ -72,7 +82,11 @@ fun MainNavHost(
         }
     }
 
-    NavHost(navController = navController, startDestination = MainRoutes.SPLASH) {
+    val toastHostState = rememberKlipprToastHostState()
+
+    CompositionLocalProvider(LocalKlipprToast provides toastHostState) {
+        Box(Modifier.fillMaxSize()) {
+            NavHost(navController = navController, startDestination = MainRoutes.SPLASH) {
 
         composable(MainRoutes.SPLASH) {
             SplashScreen(
@@ -177,5 +191,15 @@ fun MainNavHost(
             navController = navController,
             notificationViewModel = notificationViewModel,
         )
+            }
+
+            // Toast card global (favoritos / canjes), encima del grafo.
+            KlipprToastHost(
+                hostState = toastHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 96.dp),
+            )
+        }
     }
 }

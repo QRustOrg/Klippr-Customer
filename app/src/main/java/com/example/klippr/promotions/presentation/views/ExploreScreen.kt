@@ -126,6 +126,7 @@ fun ExploreScreen(
     onNavigateToHome: () -> Unit = {},
     onNavigateToCommunity: () -> Unit = {},
     onNavigateToMisPromos: () -> Unit = {},
+    onFavoriteToast: (promoTitle: String?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.listState.collectAsStateWithLifecycle()
@@ -277,7 +278,13 @@ fun ExploreScreen(
                                 favoriteByPromotionId = favoriteByPromotion,
                                 favoriteViewModel = favoriteViewModel,
                                 currentUserId = currentUserId,
-                                onFavoriteSaved = { promo -> viewModel.toggleFavorite(promo.id, true) },
+                                onFavoriteSaved = { promo ->
+                                    val alreadyFavorite = favoriteByPromotion.containsKey(promo.id)
+                                    viewModel.toggleFavorite(promo.id, true)
+                                    if (!alreadyFavorite) {
+                                        onFavoriteToast(promo.title)
+                                    }
+                                },
                                 onPromotionClick = onNavigateToDetail,
                             )
                         }

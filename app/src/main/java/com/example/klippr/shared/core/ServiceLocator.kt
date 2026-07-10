@@ -11,6 +11,7 @@ import com.example.klippr.favorites.data.store.FavoriteStoreImpl
 import com.example.klippr.iam.data.network.AuthWebService
 import com.example.klippr.iam.data.store.AuthStore
 import com.example.klippr.iam.data.store.AuthStoreImpl
+import com.example.klippr.notification.data.network.NotificationWebService
 import com.example.klippr.notification.data.store.NotificationStore
 import com.example.klippr.notification.data.store.NotificationStoreImpl
 import com.example.klippr.preferences.data.network.PreferenceWebService
@@ -63,6 +64,7 @@ class ServiceLocator(context: Context) {
     private val redemptionWebService: RedemptionWebService by lazy { ApiClient.create() }
     private val reviewWebService: ReviewWebService by lazy { ApiClient.create() }
     private val favoriteWebService: FavoriteWebService by lazy { ApiClient.create() }
+    private val notificationWebService: NotificationWebService by lazy { ApiClient.create() }
 
     // ── Stores por bounded context (expuestos como interfaz) ───────────────────
     val authStore: AuthStore by lazy { AuthStoreImpl(authWebService, sessionStore) }
@@ -76,5 +78,7 @@ class ServiceLocator(context: Context) {
     }
     val reviewStore: ReviewStore by lazy { ReviewStoreImpl(reviewWebService, db.reviewDao()) }
     val favoriteStore: FavoriteStore by lazy { FavoriteStoreImpl(favoriteWebService) }
-    val notificationStore: NotificationStore by lazy { NotificationStoreImpl(db.notificationDao()) }
+    val notificationStore: NotificationStore by lazy {
+        NotificationStoreImpl(db.notificationDao(), notificationWebService)
+    }
 }
