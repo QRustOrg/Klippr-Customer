@@ -68,6 +68,7 @@ import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.shared.presentation.components.DiscountBadge
+import com.example.klippr.shared.presentation.components.LocalKlipprToast
 import com.example.klippr.shared.presentation.components.KlipprBottomBar
 import com.example.klippr.shared.presentation.components.KlipprTab
 import com.example.klippr.shared.presentation.components.RemoteFavoriteHeartButton
@@ -108,6 +109,7 @@ fun HomeScreen(
     val favoriteState by favoriteViewModel.state.collectAsStateWithLifecycle()
     val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
+    val toast = LocalKlipprToast.current
     val favoriteByPromotion = remember(favoriteState.visibleFavorites) {
         favoriteState.visibleFavorites.associateBy { it.promotionId }
     }
@@ -211,6 +213,7 @@ fun HomeScreen(
                             onFavoriteSaved = { promo, wasFavorite ->
                                 promotionViewModel.toggleFavorite(promo.id, true)
                                 if (!wasFavorite) {
+                                    toast.showFavorite(promo.title)
                                     notificationViewModel.notify(
                                         type = NotificationType.FAVORITE_ADDED,
                                         title = "Guardado en favoritos",
