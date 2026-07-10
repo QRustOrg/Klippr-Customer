@@ -3,7 +3,6 @@ package com.example.klippr.home.presentation.view
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,24 +27,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCut
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,8 +58,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.klippr.R
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
+import com.example.klippr.notification.domain.model.NotificationType
 import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
-import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
@@ -77,6 +70,7 @@ import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.shared.presentation.component.DiscountBadge
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 import com.example.klippr.ui.theme.KlipprCardPink
 import com.example.klippr.ui.theme.KlipprPurple
 import com.example.klippr.ui.theme.KlipprTextDark
@@ -92,46 +86,43 @@ private val TextGray = KlipprTextGray
 private val PromoImgPlaceholder = Color(0xFFE4DCFB)
 private val StarAmber = Color(0xFFFFC107)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     profileViewModel: ProfileViewModel,
     promotionViewModel: PromotionViewModel,
+    favoriteViewModel: FavoriteViewModel,
     redemptionViewModel: RedemptionViewModel,
     notificationViewModel: NotificationViewModel,
+    currentUserId: String,
     onNavigateToSettings: () -> Unit,
     onNavigateToExplore: () -> Unit,
     onNavigateToMisPromos: () -> Unit,
     onNavigateToCommunity: () -> Unit,
     onNavigateToQr: (String) -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
+    onNavigateToPromotionDetail: (String) -> Unit = { _ -> },
     modifier: Modifier = Modifier,
 ) {
     val profileState by profileViewModel.state.collectAsStateWithLifecycle()
     val promoState by promotionViewModel.listState.collectAsStateWithLifecycle()
+    val favoriteState by favoriteViewModel.state.collectAsStateWithLifecycle()
     val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
     val notificationState by notificationViewModel.state.collectAsStateWithLifecycle()
+    val favoriteByPromotion = remember(favoriteState.visibleFavorites) {
+        favoriteState.visibleFavorites.associateBy { it.promotionId }
+    }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(currentUserId) {
         profileViewModel.load()
         redemptionViewModel.loadHistory()
         promotionViewModel.loadActive()
+        favoriteViewModel.loadFavorites(currentUserId)
     }
 
     val greeting = profileState.profile?.greetingName ?: ""
     val activePromos = promoState.promotions.size
     val usedCoupons = redemptionState.redeemed.size
     val hasCoupons = redemptionState.active.isNotEmpty()
-
-    var selectedPromotion by remember { mutableStateOf<Promotion?>(null) }
-
-    LaunchedEffect(redemptionState.generated) {
-        redemptionState.generated?.let { code ->
-            selectedPromotion = null
-            onNavigateToQr(code.id)
-            redemptionViewModel.consumeGenerated()
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -213,8 +204,21 @@ fun HomeScreen(
                         PromoCategorySection(
                             title = category.label(),
                             promotions = grouped[category].orEmpty(),
-                            onPromotionClick = { promo -> selectedPromotion = promo },
-                            onFavoriteClick = { id, fav -> promotionViewModel.toggleFavorite(id, fav) },
+                            favoriteByPromotionId = favoriteByPromotion,
+                            favoriteViewModel = favoriteViewModel,
+                            currentUserId = currentUserId,
+                            onPromotionClick = { promo -> onNavigateToPromotionDetail(promo.id) },
+                            onFavoriteSaved = { promo, wasFavorite ->
+                                promotionViewModel.toggleFavorite(promo.id, true)
+                                if (!wasFavorite) {
+                                    notificationViewModel.notify(
+                                        type = NotificationType.FAVORITE_ADDED,
+                                        title = "Guardado en favoritos",
+                                        message = "Agregaste una promo a tus favoritos.",
+                                        relatedId = promo.id,
+                                    )
+                                }
+                            },
                             onSeeMore = onNavigateToExplore,
                         )
                         Spacer(Modifier.height(20.dp))
@@ -224,27 +228,17 @@ fun HomeScreen(
             Spacer(Modifier.height(8.dp))
         }
     }
-
-    selectedPromotion?.let { promo ->
-        PromoApplyModal(
-            promotion = promo,
-            isLoading = redemptionState.isGenerating,
-            error = redemptionState.error,
-            onDismiss = {
-                selectedPromotion = null
-                redemptionViewModel.consumeError()
-            },
-            onApply = { redemptionViewModel.generate(promo) },
-        )
-    }
 }
 
 @Composable
 private fun PromoCategorySection(
     title: String,
     promotions: List<Promotion>,
+    favoriteByPromotionId: Map<String, com.example.klippr.favorites.domain.model.Favorite>,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onPromotionClick: (Promotion) -> Unit,
-    onFavoriteClick: (String, Boolean) -> Unit,
+    onFavoriteSaved: (Promotion, Boolean) -> Unit,
     onSeeMore: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -266,10 +260,14 @@ private fun PromoCategorySection(
     }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         items(promotions, key = { it.id }) { promo ->
+            val isFavorite = favoriteByPromotionId.containsKey(promo.id)
             PromoCardVertical(
                 promotion = promo,
+                isFavorite = isFavorite,
+                favoriteViewModel = favoriteViewModel,
+                currentUserId = currentUserId,
                 onClick = { onPromotionClick(promo) },
-                onFavoriteClick = { onFavoriteClick(promo.id, !promo.isFavorite) },
+                onFavoriteSaved = { onFavoriteSaved(promo, isFavorite) },
                 onShareClick = {
                     val send = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
@@ -285,8 +283,11 @@ private fun PromoCategorySection(
 @Composable
 private fun PromoCardVertical(
     promotion: Promotion,
+    isFavorite: Boolean,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
+    onFavoriteSaved: () -> Unit,
     onShareClick: () -> Unit = {},
 ) {
     Column(
@@ -310,23 +311,17 @@ private fun PromoCardVertical(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp)
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.28f))
-                    .clickable(onClick = onFavoriteClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (promotion.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (promotion.isFavorite) "Quitar favorito" else "Agregar favorito",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            RemoteFavoriteHeartButton(
+                userId = currentUserId,
+                promotionId = promotion.id,
+                isFavorite = isFavorite,
+                favoriteViewModel = favoriteViewModel,
+                selectedTint = Color.White,
+                unselectedTint = Color.White,
+                backgroundColor = Color.Black.copy(alpha = 0.28f),
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp),
+                onSaved = onFavoriteSaved,
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -372,83 +367,6 @@ private fun PromoCardVertical(
                 Icon(Icons.Default.Star, contentDescription = null, tint = StarAmber, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(2.dp))
                 Text("%.1f".format(r), fontSize = 13.sp, color = TextDark, fontWeight = FontWeight.Medium)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PromoApplyModal(
-    promotion: Promotion,
-    isLoading: Boolean,
-    error: String?,
-    onDismiss: () -> Unit,
-    onApply: () -> Unit,
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = Color.White,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-        ) {
-            val resId = rememberPromoDrawableId(promotion.imageKey)
-            if (resId != 0) {
-                Image(
-                    painter = painterResource(resId),
-                    contentDescription = promotion.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(16.dp)),
-                )
-                Spacer(Modifier.height(16.dp))
-            }
-            Text(
-                text = promotion.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = TextDark,
-            )
-            Spacer(Modifier.height(8.dp))
-            DiscountBadge(promotion.discountType, promotion.discountValue)
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = promotion.description,
-                fontSize = 14.sp,
-                color = TextGray,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (error != null) {
-                Spacer(Modifier.height(8.dp))
-                Text(text = error, color = Color.Red, fontSize = 13.sp)
-            }
-            Spacer(Modifier.height(24.dp))
-            Button(
-                onClick = onApply,
-                enabled = !isLoading,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = KlipprPurple),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(22.dp),
-                        strokeWidth = 2.5.dp,
-                    )
-                } else {
-                    Text("Aplicar Descuento", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
             }
         }
     }

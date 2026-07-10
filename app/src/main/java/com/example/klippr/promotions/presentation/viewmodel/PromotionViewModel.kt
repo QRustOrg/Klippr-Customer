@@ -4,12 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.domain.model.PromotionStatus
-import com.example.klippr.promotions.domain.repository.PromotionRepository
-import com.example.klippr.promotions.domain.usecase.GetActivePromotionsUseCase
-import com.example.klippr.promotions.domain.usecase.GetAllPromotionsUseCase
-import com.example.klippr.promotions.domain.usecase.GetPromotionByIdUseCase
-import com.example.klippr.promotions.domain.usecase.SearchPromotionsUseCase
-import com.example.klippr.promotions.domain.usecase.ToggleFavoriteUseCase
+import com.example.klippr.promotions.data.store.PromotionStore
+import com.example.klippr.promotions.application.usecase.GetActivePromotionsUseCase
+import com.example.klippr.promotions.application.usecase.GetAllPromotionsUseCase
+import com.example.klippr.promotions.application.usecase.GetPromotionByIdUseCase
+import com.example.klippr.promotions.application.usecase.SearchPromotionsUseCase
+import com.example.klippr.promotions.application.usecase.ToggleFavoriteUseCase
 import com.example.klippr.promotions.presentation.state.PromotionDetailState
 import com.example.klippr.promotions.presentation.state.PromotionListState
 import kotlinx.coroutines.Job
@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModelProvider
+import com.example.klippr.shared.core.ServiceLocator
 
 // @author Samuel Bonifacio
 // ViewModel único para lista y detalle. Las colecciones de Flow se lanzan en viewModelScope.
@@ -28,7 +30,7 @@ class PromotionViewModel(
     private val getPromotionById: GetPromotionByIdUseCase,
     private val searchPromotions: SearchPromotionsUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
-    private val repository: PromotionRepository,
+    private val repository: PromotionStore,
 ) : ViewModel() {
 
     private val _listState = MutableStateFlow(PromotionListState())
@@ -150,4 +152,20 @@ class PromotionViewModel(
                 .collect { list -> _listState.update { it.copy(isLoading = false, promotions = list) } }
         }
     }
+
+    companion object {
+        fun Factory(serviceLocator: ServiceLocator): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = PromotionViewModel(
+                    getAllPromotions = GetAllPromotionsUseCase(serviceLocator.promotionStore),
+                    getActivePromotions = GetActivePromotionsUseCase(serviceLocator.promotionStore),
+                    getPromotionById = GetPromotionByIdUseCase(serviceLocator.promotionStore),
+                    searchPromotions = SearchPromotionsUseCase(serviceLocator.promotionStore),
+                    toggleFavoriteUseCase = ToggleFavoriteUseCase(serviceLocator.promotionStore),
+                    repository = serviceLocator.promotionStore,
+                ) as T
+            }
+    }
+
 }

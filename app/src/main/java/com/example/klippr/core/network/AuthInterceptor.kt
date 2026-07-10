@@ -13,14 +13,20 @@ import okhttp3.Response
 class AuthInterceptor(private val sessionStore: SessionDataStore) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
+        val originalRequest = chain.request()
+        val isAuthEndpoint = originalRequest.url.encodedPath.startsWith("/api/Authentication/")
         val token = runBlocking { sessionStore.currentToken() }
-        val request = if (!token.isNullOrBlank()) {
-            chain.request().newBuilder()
+        val request = if (!isAuthEndpoint && !token.isNullOrBlank()) {
+            originalRequest.newBuilder()
                 .addHeader("Authorization", "Bearer $token")
                 .build()
         } else {
-            chain.request()
+            originalRequest
         }
-        return chain.proceed(request)
+        val response = chain.proceed(request)
+        if (!isAuthEndpoint && !token.isNullOrBlank() && response.code == 401) {
+            runBlocking { sessionStore.expireSession() }
+        }
+        return response
     }
 }

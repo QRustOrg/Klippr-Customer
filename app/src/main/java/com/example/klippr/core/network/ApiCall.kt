@@ -12,6 +12,8 @@ import java.io.IOException
  */
 class ApiException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+const val SESSION_EXPIRED_MESSAGE = "Tu sesión expiró. Inicia sesión nuevamente."
+
 /** Cuerpo de error estándar del backend: `{ "message": "..." }`. */
 private data class ErrorResponseDto(
     val message: String?,
@@ -31,6 +33,9 @@ suspend fun <T> safeApiCall(block: suspend () -> T): T =
     try {
         block()
     } catch (e: HttpException) {
+        if (e.code() == 401) {
+            throw ApiException(SESSION_EXPIRED_MESSAGE, e)
+        }
         val backendMessage = e.response()?.errorBody()?.string()
             ?.let {
                 runCatching {

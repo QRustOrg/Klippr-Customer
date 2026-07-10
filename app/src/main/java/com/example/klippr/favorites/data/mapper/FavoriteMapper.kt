@@ -7,4 +7,5 @@ fun FavoriteDto.toDomain() = Favorite(
     favoriteId = favoriteId,
     userId = userId,
     promotionId = promotionId,
+    isArchived = isArchived,
 )

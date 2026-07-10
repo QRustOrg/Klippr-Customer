@@ -25,7 +25,8 @@ import com.example.klippr.iam.presentation.viewmodel.AuthViewModel
 import com.example.klippr.notification.domain.model.NotificationType
 import com.example.klippr.notification.presentation.view.NotificationScreen
 import com.example.klippr.notification.presentation.viewmodel.NotificationViewModel
-import com.example.klippr.profile.presentation.view.ProfileScreen
+import com.example.klippr.preferences.presentation.viewmodel.PreferenceViewModel
+import com.example.klippr.profile.presentation.views.ProfileScreen
 import com.example.klippr.profile.presentation.viewmodel.ProfileViewModel
 import com.example.klippr.promotions.presentation.view.ExploreScreen
 import com.example.klippr.promotions.presentation.view.PromotionDetailScreen
@@ -34,12 +35,14 @@ import com.example.klippr.redemption.presentation.view.MisPromosScreen
 import com.example.klippr.redemption.presentation.view.QrCodeScreen
 import com.example.klippr.redemption.presentation.view.RedemptionSuccessScreen
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
+import com.example.klippr.settings.presentation.view.SettingsDetailScreen
 import com.example.klippr.settings.presentation.view.SettingsScreen
 
 @Composable
 fun AppNavGraph(
     authViewModel: AuthViewModel,
     profileViewModel: ProfileViewModel,
+    preferenceViewModel: PreferenceViewModel,
     viewModel: PromotionViewModel,
     redemptionViewModel: RedemptionViewModel,
     communityViewModel: CommunityViewModel,          // ← nuevo
@@ -52,6 +55,15 @@ fun AppNavGraph(
         authViewModel.signOut()
         navController.navigate(Routes.SIGN_IN) {
             popUpTo(0) { inclusive = true }
+        }
+    }
+
+    LaunchedEffect(sessionStore, navController) {
+        sessionStore.sessionExpiredEvents.collect {
+            authViewModel.markSessionExpired()
+            navController.navigate(Routes.SIGN_IN) {
+                popUpTo(0) { inclusive = true }
+            }
         }
     }
 
@@ -93,17 +105,22 @@ fun AppNavGraph(
         }
 
         composable(Routes.HOME) {
+            val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
+            val currentUserId = session?.user?.userId ?: ""
             HomeScreen(
                 profileViewModel    = profileViewModel,
                 promotionViewModel  = viewModel,
+                favoriteViewModel   = favoriteViewModel,
                 redemptionViewModel = redemptionViewModel,
                 notificationViewModel  = notificationViewModel,
+                currentUserId       = currentUserId,
                 onNavigateToSettings  = { navController.navigate(Routes.SETTINGS) },
                 onNavigateToExplore   = { navController.navigate(Routes.EXPLORE) },
                 onNavigateToMisPromos = { navController.navigate(Routes.misPromos(Routes.TAB_CODES)) },
                 onNavigateToCommunity = { navController.navigate(Routes.COMMUNITY) },
                 onNavigateToQr        = { id -> navController.navigate(Routes.redemptionSuccess(id)) },
                 onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                onNavigateToPromotionDetail = { id -> navController.navigate(Routes.promotionDetail(id)) },
             )
         }
 
@@ -111,7 +128,35 @@ fun AppNavGraph(
             SettingsScreen(
                 onBack              = { navController.popBackStack() },
                 onNavigateToProfile = { navController.navigate(Routes.PROFILE) },
+                onNavigateToDetail  = { section -> navController.navigate(Routes.settingsDetail(section)) },
                 onLogout            = logout,
+                onNavigateHome      = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
+                },
+                onNavigateFavorites = { navController.navigate(Routes.misPromos(Routes.TAB_FAVORITES)) },
+                onNavigatePromos    = { navController.navigate(Routes.EXPLORE) },
+                onNavigateCommunity = { navController.navigate(Routes.COMMUNITY) },
+            )
+        }
+
+        composable(
+            route = Routes.SETTINGS_DETAIL,
+            arguments = listOf(navArgument(Routes.ARG_SETTINGS_SECTION) { type = NavType.StringType }),
+        ) { backStackEntry ->
+            SettingsDetailScreen(
+                sectionKey = backStackEntry.arguments?.getString(Routes.ARG_SETTINGS_SECTION).orEmpty(),
+                viewModel = preferenceViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
+                },
+                onNavigateFavorites = { navController.navigate(Routes.misPromos(Routes.TAB_FAVORITES)) },
+                onNavigatePromos = { navController.navigate(Routes.EXPLORE) },
+                onNavigateCommunity = { navController.navigate(Routes.COMMUNITY) },
             )
         }
 
@@ -143,8 +188,12 @@ fun AppNavGraph(
         }
 
         composable(Routes.EXPLORE) {
+            val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
+            val currentUserId = session?.user?.userId ?: ""
             ExploreScreen(
                 viewModel           = viewModel,
+                favoriteViewModel   = favoriteViewModel,
+                currentUserId       = currentUserId,
                 onBack              = { navController.popBackStack() },
                 onNavigateToDetail  = { id -> navController.navigate(Routes.promotionDetail(id)) },
                 onNavigateToHome    = {
@@ -161,8 +210,14 @@ fun AppNavGraph(
         ) { backStackEntry ->
             val promotionId    = backStackEntry.arguments?.getString(Routes.ARG_PROMOTION_ID).orEmpty()
             val redemptionState by redemptionViewModel.state.collectAsStateWithLifecycle()
+            val favoriteState by favoriteViewModel.state.collectAsStateWithLifecycle()
             val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
             val currentUserId = session?.user?.userId ?: ""
+            val favorite = favoriteState.visibleFavorites.firstOrNull { it.promotionId == promotionId }
+
+            LaunchedEffect(currentUserId) {
+                favoriteViewModel.loadFavorites(currentUserId)
+            }
 
             LaunchedEffect(redemptionState.generated) {
                 redemptionState.generated?.let { code ->
@@ -180,6 +235,8 @@ fun AppNavGraph(
             PromotionDetailScreen(
                 promotionId     = promotionId,
                 viewModel       = viewModel,
+                favoriteViewModel = favoriteViewModel,
+                currentUserId   = currentUserId,
                 onBack          = { navController.popBackStack() },
                 onApplyDiscount = { promo ->
                     redemptionViewModel.generate(promo)
@@ -187,16 +244,15 @@ fun AppNavGraph(
                 onNavigateToReviews = { navController.navigate(Routes.community(promotionId)) },
                 isGenerating    = redemptionState.isGenerating,
                 errorMessage    = redemptionState.error,
-                onToggleFavorite = { id, isFavorite ->
-                    if (isFavorite) {
-                        favoriteViewModel.addFavorite(currentUserId, id) {
-                            notificationViewModel.notify(
-                                type = NotificationType.FAVORITE_ADDED,
-                                title = "Guardado en favoritos",
-                                message = "Agregaste una promo a tus favoritos.",
-                                relatedId = id,
-                            )
-                        }
+                isFavoriteOverride = favorite != null,
+                onFavoriteSaved = { id ->
+                    if (favorite == null) {
+                        notificationViewModel.notify(
+                            type = NotificationType.FAVORITE_ADDED,
+                            title = "Guardado en favoritos",
+                            message = "Agregaste una promo a tus favoritos.",
+                            relatedId = id,
+                        )
                     }
                 },
             )
@@ -282,7 +338,8 @@ fun AppNavGraph(
             }),
         ) { backStackEntry ->
             val initialTab = when (backStackEntry.arguments?.getString(Routes.ARG_TAB)) {
-                Routes.TAB_CODES -> 1
+                Routes.TAB_ARCHIVED -> 1
+                Routes.TAB_CODES -> 2
                 else -> 0
             }
             val session by sessionStore.session.collectAsStateWithLifecycle(initialValue = null)
@@ -319,6 +376,7 @@ fun AppNavGraph(
             val currentUserId = session?.user?.userId ?: ""
             CommunityScreen(
                 viewModel         = communityViewModel,
+                favoriteViewModel = favoriteViewModel,
                 currentUserId     = currentUserId,
                 promotionId       = promotionIdFilter,
                 onNavigateHome    = { navController.navigate(Routes.HOME) { popUpTo(Routes.HOME) { inclusive = true } } },

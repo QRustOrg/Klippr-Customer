@@ -6,6 +6,7 @@ data class FavoriteDto(
     @SerializedName("favoriteId")  val favoriteId: String,
     @SerializedName("userId")      val userId: String,
     @SerializedName("promotionId") val promotionId: String,
+    @SerializedName("isArchived")  val isArchived: Boolean = false,
     @SerializedName("createdAt")   val createdAt: String?,
     @SerializedName("updatedAt")   val updatedAt: String?,
 )

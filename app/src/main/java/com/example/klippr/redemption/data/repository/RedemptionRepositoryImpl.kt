@@ -1,6 +1,7 @@
 package com.example.klippr.redemption.data.repository
 
 import com.example.klippr.promotions.domain.model.Promotion
+import com.example.klippr.core.network.safeApiCall
 import com.example.klippr.redemption.data.mapper.RedemptionMapper
 import com.example.klippr.redemption.data.remote.api.RedemptionApiService
 import com.example.klippr.redemption.data.remote.dto.ConfirmRedemptionRequestDto
@@ -25,7 +26,7 @@ class RedemptionRepositoryImpl(
             discountAppliedAmount = promotion.discountValue,
             validationMethod = "QrScan",
         )
-        val dto = api.generate(request)
+        val dto = safeApiCall { api.generate(request) }
         // Asegura resumen de promo en la tarjeta aunque la respuesta venga mínima.
         return mapper.toDomain(dto).copy(
             promotionId = promotion.id,
@@ -37,10 +38,10 @@ class RedemptionRepositoryImpl(
     }
 
     override suspend fun getByConsumer(consumerId: String): List<RedemptionCode> =
-        mapper.toDomainList(api.getByConsumer(consumerId))
+        mapper.toDomainList(safeApiCall { api.getByConsumer(consumerId) })
 
     override suspend fun getById(id: String): RedemptionCode =
-        mapper.toDomain(api.getById(id))
+        mapper.toDomain(safeApiCall { api.getById(id) })
 
     override suspend fun confirm(code: RedemptionCode): RedemptionCode {
         // ponytail: businessId = el del propio código (negocio de la promo); ManualCode es valor válido.
@@ -48,6 +49,6 @@ class RedemptionRepositoryImpl(
             businessId = code.businessId.orEmpty(),
             confirmedAt = Instant.now().toString(),
         )
-        return mapper.toDomain(api.confirm(code.id, request))
+        return mapper.toDomain(safeApiCall { api.confirm(code.id, request) })
     }
 }

@@ -6,7 +6,7 @@ data class ReviewDto(
     @SerializedName("id")             val id: String,
     @SerializedName("promotionId")    val promotionId: String,
     @SerializedName("promotionTitle") val promotionTitle: String,
-    @SerializedName("promotionImage") val promotionImageUrl: String,
+    @SerializedName("promotionImage") val promotionImageUrl: String?,
     @SerializedName("businessName")   val businessName: String,
     @SerializedName("userId")         val userId: String,
     @SerializedName("userName")       val userName: String,

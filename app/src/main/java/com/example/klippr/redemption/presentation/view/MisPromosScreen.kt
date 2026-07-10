@@ -22,11 +22,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -79,6 +80,7 @@ import com.example.klippr.redemption.domain.model.RedemptionStatus
 import com.example.klippr.redemption.presentation.viewmodel.RedemptionViewModel
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 import com.example.klippr.shared.presentation.component.discountLabel
 import com.example.klippr.ui.theme.KlipprTextDark
 import com.example.klippr.ui.theme.KlipprTextGray
@@ -88,7 +90,6 @@ import com.example.klippr.redemption.util.formatVence
 import com.example.klippr.redemption.util.generateQrBitmap
 import com.example.klippr.ui.theme.KlipprLavender
 import com.example.klippr.ui.theme.KlipprPurple
-import java.time.Instant
 
 // @author Samuel Bonifacio
 
@@ -127,9 +128,10 @@ fun MisPromosScreen(
     LaunchedEffect(Unit) { viewModel.loadHistory() }
     LaunchedEffect(currentUserId) { favoriteViewModel.loadFavorites(currentUserId) }
 
-    // 0 = Favoritos (tab por defecto), 1 = Mis Promos (activos/canjeados/expirados)
-    var outerTab by remember(initialOuterTab) { mutableIntStateOf(initialOuterTab.coerceIn(0, 1)) }
+    // 0 = Favoritos, 1 = Archivados, 2 = Mis Promos (activos/canjeados/expirados)
+    var outerTab by remember(initialOuterTab) { mutableIntStateOf(initialOuterTab.coerceIn(0, 2)) }
     var selectedTab by remember { mutableIntStateOf(0) }
+    var clearTarget by remember { mutableStateOf<List<RedemptionCode>?>(null) }
 
     // US-13: ReviewBottomSheet como modal sobre MisPromos
     if (communityUiState.isReviewSheetOpen) {
@@ -142,12 +144,34 @@ fun MisPromosScreen(
         )
     }
 
+    clearTarget?.let { codes ->
+        AlertDialog(
+            onDismissRequest = { clearTarget = null },
+            title = { Text("Limpiar promos") },
+            text = { Text("Se eliminaran ${codes.size} promos de esta lista.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clear(codes); clearTarget = null }) {
+                    Text("Limpiar", color = KlipprPurple, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { clearTarget = null }) {
+                    Text("Cancelar", color = TextSecondary)
+                }
+            },
+        )
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        if (outerTab == 0) "Favoritos" else "Mis Promos",
+                        when (outerTab) {
+                            1 -> "Archivados"
+                            2 -> "Mis Promos"
+                            else -> "Favoritos"
+                        },
                         fontWeight = FontWeight.Bold, color = Color.White, fontSize = 24.sp,
                     )
                 },
@@ -169,22 +193,62 @@ fun MisPromosScreen(
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             TabRow(selectedTabIndex = outerTab, containerColor = Color.White, contentColor = KlipprPurple) {
                 Tab(selected = outerTab == 0, onClick = { outerTab = 0 }, text = { Text("Favoritos") })
-                Tab(selected = outerTab == 1, onClick = { outerTab = 1 }, text = { Text("Mis Promos") })
+                Tab(selected = outerTab == 1, onClick = { outerTab = 1 }, text = { Text("Archivados") })
+                Tab(selected = outerTab == 2, onClick = { outerTab = 2 }, text = { Text("Mis Promos") })
             }
 
-            if (outerTab == 0) {
-                FavoritesTabContent(
+            when (outerTab) {
+                0 -> FavoritesTabContent(
                     favorites = favoriteState.visibleFavorites,
                     isLoading = favoriteState.isLoading,
                     promotions = promotionListState.promotions,
-                    onVerDetalles = onNavigateToDetail,
-                    onEliminar = { fav ->
-                        favoriteViewModel.deleteFavorite(fav.favoriteId, currentUserId)
-                        promotionViewModel.toggleFavorite(fav.promotionId, false)
+                    emptyText = "Aun no tienes favoritos. Marca una promo con el corazon para verla aqui.",
+                    secondaryActionLabel = "Archivar",
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
+                    onVerDetalles = { fav ->
+                        favoriteViewModel.openFavoriteDetails(fav.favoriteId, onNavigateToDetail)
                     },
-                    onArchivar = { fav -> favoriteViewModel.archiveFavorite(fav.favoriteId) },
+                    onFavoriteSaved = { fav ->
+                        promotionViewModel.toggleFavorite(fav.promotionId, true)
+                    },
+                    onEliminar = { fav ->
+                        favoriteViewModel.deleteFavorite(fav.favoriteId, currentUserId) {
+                            promotionViewModel.toggleFavorite(fav.promotionId, false)
+                        }
+                    },
+                    onSecondaryAction = { fav ->
+                        favoriteViewModel.archiveFavorite(fav.favoriteId, currentUserId) {
+                            promotionViewModel.toggleFavorite(fav.promotionId, false)
+                        }
+                    },
                 )
-            } else {
+                1 -> FavoritesTabContent(
+                    favorites = favoriteState.archivedFavorites,
+                    isLoading = favoriteState.isLoading,
+                    promotions = promotionListState.promotions,
+                    emptyText = "No tienes favoritos archivados.",
+                    secondaryActionLabel = "Restaurar",
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
+                    onVerDetalles = { fav ->
+                        favoriteViewModel.openFavoriteDetails(fav.favoriteId, onNavigateToDetail)
+                    },
+                    onFavoriteSaved = { fav ->
+                        promotionViewModel.toggleFavorite(fav.promotionId, true)
+                    },
+                    onEliminar = { fav ->
+                        favoriteViewModel.deleteFavorite(fav.favoriteId, currentUserId) {
+                            promotionViewModel.toggleFavorite(fav.promotionId, false)
+                        }
+                    },
+                    onSecondaryAction = { fav ->
+                        favoriteViewModel.restoreFavorite(fav.favoriteId, currentUserId) {
+                            promotionViewModel.toggleFavorite(fav.promotionId, true)
+                        }
+                    },
+                )
+                else -> {
                 PromosTabRow(
                     selected = selectedTab,
                     counts = intArrayOf(state.active.size, state.redeemed.size, state.expired.size),
@@ -213,6 +277,7 @@ fun MisPromosScreen(
                         1 -> HistorialList(
                             codes = state.redeemed,
                             onCodeClick = onCodeClick,
+                            onClear = { code -> clearTarget = listOf(code) },
                             onLeaveReview = { code ->
                                 communityViewModel.openReviewSheetForRedeemed(
                                     code.promotionId,
@@ -225,10 +290,12 @@ fun MisPromosScreen(
                             emptyText = "No tienes códigos expirados",
                             onCodeClick = onCodeClick,
                             onMarkRedeemed = null,
+                            onClear = { code -> clearTarget = listOf(code) },
                             isBusy = false,
                         )
                     }
                 }
+            }
             }
         }
     }
@@ -241,15 +308,20 @@ private fun FavoritesTabContent(
     favorites: List<Favorite>,
     isLoading: Boolean,
     promotions: List<Promotion>,
-    onVerDetalles: (String) -> Unit,
+    emptyText: String,
+    secondaryActionLabel: String,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
+    onVerDetalles: (Favorite) -> Unit,
+    onFavoriteSaved: (Favorite) -> Unit,
     onEliminar: (Favorite) -> Unit,
-    onArchivar: (Favorite) -> Unit,
+    onSecondaryAction: (Favorite) -> Unit,
 ) {
     when {
         isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = KlipprPurple)
         }
-        favorites.isEmpty() -> EmptyMessage("Aún no tienes favoritos. Marca una promo con el corazón para verla aquí.")
+        favorites.isEmpty() -> EmptyMessage(emptyText)
         else -> LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
@@ -260,9 +332,13 @@ private fun FavoritesTabContent(
                 FavoriteCard(
                     favorite = fav,
                     promotion = promo,
-                    onVerDetalles = { onVerDetalles(fav.promotionId) },
+                    secondaryActionLabel = secondaryActionLabel,
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
+                    onVerDetalles = { onVerDetalles(fav) },
+                    onFavoriteSaved = { onFavoriteSaved(fav) },
                     onEliminar = { onEliminar(fav) },
-                    onArchivar = { onArchivar(fav) },
+                    onSecondaryAction = { onSecondaryAction(fav) },
                 )
             }
         }
@@ -273,9 +349,13 @@ private fun FavoritesTabContent(
 private fun FavoriteCard(
     favorite: Favorite,
     promotion: Promotion?,
+    secondaryActionLabel: String,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onVerDetalles: () -> Unit,
+    onFavoriteSaved: () -> Unit,
     onEliminar: () -> Unit,
-    onArchivar: () -> Unit,
+    onSecondaryAction: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Column(
@@ -321,14 +401,24 @@ private fun FavoriteCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(Icons.Default.Bookmark, contentDescription = "Guardado", tint = KlipprPurple, modifier = Modifier.size(22.dp))
+            RemoteFavoriteHeartButton(
+                userId = currentUserId,
+                promotionId = favorite.promotionId,
+                isFavorite = true,
+                favoriteViewModel = favoriteViewModel,
+                selectedTint = KlipprPurple,
+                unselectedTint = TextSecondary,
+                backgroundColor = Color.Transparent,
+                modifier = Modifier.size(32.dp),
+                onSaved = onFavoriteSaved,
+            )
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(Icons.Default.MoreVert, contentDescription = "Más opciones", tint = TextSecondary)
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(text = { Text("Eliminar") }, onClick = { menuOpen = false; onEliminar() })
-                    DropdownMenuItem(text = { Text("Archivar") }, onClick = { menuOpen = false; onArchivar() })
+                    DropdownMenuItem(text = { Text(secondaryActionLabel) }, onClick = { menuOpen = false; onSecondaryAction() })
                 }
             }
         }
@@ -383,6 +473,7 @@ private fun QrCardsList(
     emptyText: String,
     onCodeClick: (String) -> Unit,
     onMarkRedeemed: ((RedemptionCode) -> Unit)?,
+    onClear: ((RedemptionCode) -> Unit)? = null,
     isBusy: Boolean,
 ) {
     if (codes.isEmpty()) {
@@ -399,6 +490,7 @@ private fun QrCardsList(
                 code = code,
                 onClick = { onCodeClick(code.id) },
                 onMarkRedeemed = onMarkRedeemed?.let { cb -> { cb(code) } },
+                onClear = onClear?.let { cb -> { cb(code) } },
                 isBusy = isBusy,
             )
         }
@@ -410,6 +502,7 @@ private fun QrCard(
     code: RedemptionCode,
     onClick: () -> Unit,
     onMarkRedeemed: (() -> Unit)?,
+    onClear: (() -> Unit)?,
     isBusy: Boolean,
 ) {
     Column(
@@ -449,6 +542,15 @@ private fun QrCard(
                     Spacer(Modifier.width(8.dp))
                     StatusPill(code.status)
                 }
+                if (onClear != null) {
+                    IconButton(
+                        onClick = onClear,
+                        enabled = !isBusy,
+                        modifier = Modifier.align(Alignment.End).size(32.dp),
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Limpiar promo", tint = TextSecondary)
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(text = code.promotionTitle ?: code.discountLabel(), fontSize = 16.sp, color = TextPrimary)
                 Spacer(Modifier.height(10.dp))
@@ -475,6 +577,7 @@ private fun QrCard(
 private fun HistorialList(
     codes: List<RedemptionCode>,
     onCodeClick: (String) -> Unit,
+    onClear: (RedemptionCode) -> Unit,
     onLeaveReview: (RedemptionCode) -> Unit,
 ) {
     var filterOpen by remember { mutableStateOf(false) }
@@ -545,6 +648,7 @@ private fun HistorialList(
                 HistorialCard(
                     code = code,
                     onClick = { onCodeClick(code.id) },
+                    onClear = { onClear(code) },
                     onLeaveReview = { onLeaveReview(code) },
                 )
             }
@@ -558,22 +662,22 @@ private fun applyFilters(
     periodo: Periodo,
     orden: OrdenMonto,
 ): List<RedemptionCode> {
-    val now = Instant.now()
+    val now = System.currentTimeMillis()
     val cutoff = when (periodo) {
         Periodo.TODOS -> null
-        Periodo.HOY -> now.minusSeconds(86_400)
-        Periodo.SEMANA -> now.minusSeconds(7 * 86_400)
-        Periodo.MES -> now.minusSeconds(30 * 86_400)
+        Periodo.HOY -> now - 86_400_000L
+        Periodo.SEMANA -> now - 7 * 86_400_000L
+        Periodo.MES -> now - 30 * 86_400_000L
     }
     var out = codes
     if (negocio != null) {
         out = out.filter { (it.businessName ?: it.promotionTitle) == negocio }
     }
     if (cutoff != null) {
-        out = out.filter { it.redeemedAt != null && it.redeemedAt.isAfter(cutoff) }
+        out = out.filter { it.redeemedAt != null && it.redeemedAt > cutoff }
     }
     out = when (orden) {
-        OrdenMonto.NINGUNO -> out.sortedByDescending { it.redeemedAt ?: Instant.MIN }
+        OrdenMonto.NINGUNO -> out.sortedByDescending { it.redeemedAt ?: Long.MIN_VALUE }
         OrdenMonto.MAYOR -> out.sortedByDescending { it.discountAppliedAmount }
         OrdenMonto.MENOR -> out.sortedBy { it.discountAppliedAmount }
     }
@@ -584,6 +688,7 @@ private fun applyFilters(
 private fun HistorialCard(
     code: RedemptionCode,
     onClick: () -> Unit,
+    onClear: () -> Unit,
     onLeaveReview: () -> Unit,
 ) {
     Column(
@@ -614,14 +719,20 @@ private fun HistorialCard(
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = code.businessName ?: code.promotionTitle ?: "Promoción",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = code.businessName ?: code.promotionTitle ?: "Promoción",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = onClear, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = "Limpiar promo", tint = TextSecondary)
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = "${code.discountLabel()} - ${formatHora(code.redeemedAt)}",

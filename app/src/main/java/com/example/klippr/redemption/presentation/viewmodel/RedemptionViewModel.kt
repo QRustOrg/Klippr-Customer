@@ -2,19 +2,23 @@ package com.example.klippr.redemption.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.klippr.iam.domain.usecase.GetCurrentUserUseCase
+import com.example.klippr.iam.application.usecase.GetCurrentUserUseCase
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.redemption.domain.model.RedemptionCode
-import com.example.klippr.redemption.domain.usecase.ConfirmRedemptionUseCase
-import com.example.klippr.redemption.domain.usecase.GenerateRedemptionUseCase
-import com.example.klippr.redemption.domain.usecase.GetConsumerRedemptionsUseCase
-import com.example.klippr.redemption.domain.usecase.GetRedemptionByIdUseCase
+import com.example.klippr.redemption.domain.model.RedemptionStatus
+import com.example.klippr.redemption.domain.model.redemptionBlockedMessage
+import com.example.klippr.redemption.application.usecase.ConfirmRedemptionUseCase
+import com.example.klippr.redemption.application.usecase.GenerateRedemptionUseCase
+import com.example.klippr.redemption.application.usecase.GetConsumerRedemptionsUseCase
+import com.example.klippr.redemption.application.usecase.GetRedemptionByIdUseCase
 import com.example.klippr.redemption.presentation.state.RedemptionUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModelProvider
+import com.example.klippr.shared.core.ServiceLocator
 
 // @author Samuel Bonifacio
 /** ViewModel de Redemption: genera códigos (US-04) y carga el historial (US-05/06). */
@@ -50,6 +54,10 @@ class RedemptionViewModel(
     /** US-04: genera el código de [promotion]; deja el resultado en `generated`. */
     fun generate(promotion: Promotion) {
         viewModelScope.launch {
+            promotion.redemptionBlockedMessage()?.let { message ->
+                _state.update { it.copy(isGenerating = false, error = message, generated = null) }
+                return@launch
+            }
             val consumerId = getCurrentUser()?.userId
             if (consumerId == null) {
                 _state.update { it.copy(error = "Sesión no encontrada") }
@@ -82,7 +90,7 @@ class RedemptionViewModel(
                 _state.update { it.copy(isGenerating = false) }
                 loadHistory()
             } catch (e: Exception) {
-                _state.update { it.copy(isGenerating = false, error = e.message ?: "Error al confirmar canje") }
+                _state.update { it.copy(isGenerating = false, error = e.confirmRedemptionMessage()) }
             }
         }
     }
@@ -90,6 +98,18 @@ class RedemptionViewModel(
     fun consumeGenerated() = _state.update { it.copy(generated = null) }
 
     fun consumeError() = _state.update { it.copy(error = null, codeError = null) }
+
+    fun clear(codes: List<RedemptionCode>) {
+        if (codes.isEmpty()) return
+        val clearedIds = codes.map { it.id }.toSet()
+        _state.update { current ->
+            current.copy(codes = current.codes.filterNot { it.id in clearedIds })
+        }
+    }
+
+    fun clearFinished() {
+        clear(_state.value.codes.filter { it.status != RedemptionStatus.ACTIVE })
+    }
 
     /** Carga un codigo por id para abrir QR desde ruta directa o tras perder estado en memoria. */
     fun loadCodeById(id: String) {
@@ -124,5 +144,29 @@ class RedemptionViewModel(
                 }
             }
         }
+    }
+
+    companion object {
+        fun Factory(serviceLocator: ServiceLocator): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = RedemptionViewModel(
+                    generateRedemption = GenerateRedemptionUseCase(serviceLocator.redemptionStore),
+                    getConsumerRedemptions = GetConsumerRedemptionsUseCase(serviceLocator.redemptionStore),
+                    getRedemptionById = GetRedemptionByIdUseCase(serviceLocator.redemptionStore),
+                    confirmRedemption = ConfirmRedemptionUseCase(serviceLocator.redemptionStore),
+                    getCurrentUser = GetCurrentUserUseCase(serviceLocator.authStore),
+                ) as T
+            }
+    }
+
+}
+
+private fun Exception.confirmRedemptionMessage(): String {
+    val rawMessage = message
+    return if (rawMessage == "One or more validation errors occurred.") {
+        "No se pudo confirmar el canje. Inténtalo nuevamente."
+    } else {
+        rawMessage ?: "Error al confirmar canje"
     }
 }

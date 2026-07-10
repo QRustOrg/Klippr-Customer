@@ -32,7 +32,7 @@ class ReviewRepositoryImpl(
         rating: Int,
         comment: String
     ): Result<Review> = try {
-        val dto = api.postReview(PostReviewRequest(promotionId, rating, comment))
+        val dto = safeApiCall { api.postReview(PostReviewRequest(promotionId, rating, comment)) }
         dao.insert(dto.toEntity())
         Result.success(dto.toDomain())
     } catch (e: Exception) {

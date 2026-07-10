@@ -72,12 +72,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.promotions.domain.model.DiscountType
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
 import com.example.klippr.shared.presentation.component.KlipprBottomBar
 import com.example.klippr.shared.presentation.component.KlipprTab
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 import com.example.klippr.ui.theme.KlipprTextDark
 import com.example.klippr.ui.theme.KlipprTextGray
@@ -117,6 +119,8 @@ private data class ExploreFilterState(
 @Composable
 fun ExploreScreen(
     viewModel: PromotionViewModel,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onBack: () -> Unit,
     onNavigateToDetail: (String) -> Unit = {},
     onNavigateToHome: () -> Unit = {},
@@ -125,10 +129,17 @@ fun ExploreScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.listState.collectAsStateWithLifecycle()
+    val favoriteState by favoriteViewModel.state.collectAsStateWithLifecycle()
+    val favoriteByPromotion = remember(favoriteState.visibleFavorites) {
+        favoriteState.visibleFavorites.associateBy { it.promotionId }
+    }
 
     // La exploración consume solo promociones activas (GET /api/promotions/active),
     // las mismas que publica la app Flutter de los negocios.
-    LaunchedEffect(Unit) { viewModel.loadActive() }
+    LaunchedEffect(currentUserId) {
+        viewModel.loadActive()
+        favoriteViewModel.loadFavorites(currentUserId)
+    }
 
     var searchQuery by remember { mutableStateOf("") }
     var showFilterPanel by remember { mutableStateOf(false) }
@@ -263,6 +274,10 @@ fun ExploreScreen(
                             ExploreCategorySection(
                                 category = category,
                                 promotions = promos,
+                                favoriteByPromotionId = favoriteByPromotion,
+                                favoriteViewModel = favoriteViewModel,
+                                currentUserId = currentUserId,
+                                onFavoriteSaved = { promo -> viewModel.toggleFavorite(promo.id, true) },
                                 onPromotionClick = onNavigateToDetail,
                             )
                         }
@@ -643,6 +658,10 @@ private fun EmptyFilterOption(label: String) {
 private fun ExploreCategorySection(
     category: PromotionCategory,
     promotions: List<Promotion>,
+    favoriteByPromotionId: Map<String, com.example.klippr.favorites.domain.model.Favorite>,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
+    onFavoriteSaved: (Promotion) -> Unit,
     onPromotionClick: (String) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
@@ -682,14 +701,28 @@ private fun ExploreCategorySection(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(promotions, key = { it.id }) { promo ->
-                ExplorePromoCard(promotion = promo, onClick = { onPromotionClick(promo.id) })
+                ExplorePromoCard(
+                    promotion = promo,
+                    isFavorite = favoriteByPromotionId.containsKey(promo.id),
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
+                    onClick = { onPromotionClick(promo.id) },
+                    onFavoriteSaved = { onFavoriteSaved(promo) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ExplorePromoCard(promotion: Promotion, onClick: () -> Unit) {
+private fun ExplorePromoCard(
+    promotion: Promotion,
+    isFavorite: Boolean,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
+    onClick: () -> Unit,
+    onFavoriteSaved: () -> Unit,
+) {
     Card(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
@@ -698,25 +731,40 @@ private fun ExplorePromoCard(promotion: Promotion, onClick: () -> Unit) {
         modifier = Modifier.width(160.dp),
     ) {
         Column {
-            val imageModifier = Modifier
-                .fillMaxWidth()
-                .height(140.dp)
-                .background(Color(0xFFE8E8E8))
-            val resId = rememberPromoDrawableId(promotion.imageKey)
-            if (resId != 0) {
-                Image(
-                    painter = painterResource(resId),
-                    contentDescription = promotion.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = imageModifier,
-                )
-            } else {
-                // Sin drawable local para este imageKey: cae a la imagen remota (o placeholder gris).
-                AsyncImage(
-                    model = promotion.imageUrl,
-                    contentDescription = promotion.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = imageModifier,
+            Box {
+                val imageModifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .background(Color(0xFFE8E8E8))
+                val resId = rememberPromoDrawableId(promotion.imageKey)
+                if (resId != 0) {
+                    Image(
+                        painter = painterResource(resId),
+                        contentDescription = promotion.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = imageModifier,
+                    )
+                } else {
+                    // Sin drawable local para este imageKey: cae a la imagen remota (o placeholder gris).
+                    AsyncImage(
+                        model = promotion.imageUrl,
+                        contentDescription = promotion.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = imageModifier,
+                    )
+                }
+                RemoteFavoriteHeartButton(
+                    userId = currentUserId,
+                    promotionId = promotion.id,
+                    isFavorite = isFavorite,
+                    favoriteViewModel = favoriteViewModel,
+                    selectedTint = Color.White,
+                    unselectedTint = Color.White,
+                    backgroundColor = Color.Black.copy(alpha = 0.28f),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+                    onSaved = onFavoriteSaved,
                 )
             }
             Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {

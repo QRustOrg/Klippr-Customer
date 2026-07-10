@@ -24,8 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -61,11 +59,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.klippr.favorites.presentation.viewmodel.FavoriteViewModel
 import com.example.klippr.promotions.domain.model.Promotion
 import com.example.klippr.promotions.domain.model.PromotionCategory
 import com.example.klippr.promotions.presentation.viewmodel.PromotionViewModel
+import com.example.klippr.redemption.domain.model.redemptionBlockedMessage
 import com.example.klippr.redemption.util.formatVence
 import com.example.klippr.shared.presentation.component.discountLabel
+import com.example.klippr.shared.presentation.component.RemoteFavoriteHeartButton
 import com.example.klippr.shared.presentation.component.rememberPromoDrawableId
 import com.example.klippr.ui.theme.KlipprCardPink
 import com.example.klippr.ui.theme.KlipprPurple
@@ -78,12 +79,15 @@ import com.example.klippr.ui.theme.KlipprTextGray
 fun PromotionDetailScreen(
     promotionId: String,
     viewModel: PromotionViewModel,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onBack: () -> Unit,
     onApplyDiscount: (Promotion) -> Unit,
     onNavigateToReviews: (promotionId: String) -> Unit = { _ -> },
     isGenerating: Boolean = false,
     errorMessage: String? = null,
-    onToggleFavorite: (promotionId: String, isFavorite: Boolean) -> Unit = { _, _ -> },
+    isFavoriteOverride: Boolean? = null,
+    onFavoriteSaved: (promotionId: String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.detailState.collectAsStateWithLifecycle()
@@ -120,12 +124,13 @@ fun PromotionDetailScreen(
                     errorMessage = errorMessage,
                     onApplyDiscount = onApplyDiscount,
                     onBack = onBack,
-                    isFavorite = promotion.isFavorite,
+                    isFavorite = isFavoriteOverride ?: promotion.isFavorite,
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
                     onShare = { sharePromotion(context, promotion, businessDisplayName) },
-                    onToggleFavorite = {
-                        val nextValue = !promotion.isFavorite
-                        viewModel.toggleFavorite(promotion.id, nextValue)
-                        onToggleFavorite(promotion.id, nextValue)
+                    onFavoriteSaved = {
+                        viewModel.toggleFavorite(promotion.id, true)
+                        onFavoriteSaved(promotion.id)
                     },
                     onNavigateToReviews = { onNavigateToReviews(promotion.id) },
                 )
@@ -143,11 +148,15 @@ private fun PromotionDetailContent(
     onApplyDiscount: (Promotion) -> Unit,
     onBack: () -> Unit,
     isFavorite: Boolean,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onShare: () -> Unit,
-    onToggleFavorite: () -> Unit,
+    onFavoriteSaved: () -> Unit,
     onNavigateToReviews: () -> Unit,
 ) {
     var accepted by remember(promotion.id) { mutableStateOf(false) }
+    val blockedMessage = promotion.redemptionBlockedMessage()
+    val visibleError = errorMessage ?: blockedMessage
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -163,10 +172,13 @@ private fun PromotionDetailContent(
             ) {
                 PromotionHeroImage(promotion)
                 TopActions(
+                    promotionId = promotion.id,
                     isFavorite = isFavorite,
+                    favoriteViewModel = favoriteViewModel,
+                    currentUserId = currentUserId,
                     onBack = onBack,
                     onShare = onShare,
-                    onToggleFavorite = onToggleFavorite,
+                    onFavoriteSaved = onFavoriteSaved,
                 )
             }
 
@@ -238,7 +250,7 @@ private fun PromotionDetailContent(
                 Spacer(Modifier.height(10.dp))
                 DetailInfoLine("Cantidad:", redemptionsLabel(promotion))
                 Spacer(Modifier.height(10.dp))
-                DetailInfoLine("Vigencia:", "Hasta el ${formatVence(promotion.endDate)}")
+                DetailInfoLine("Vigencia:", "Hasta el ${formatVence(promotion.endDate.toEpochMilli())}")
 
                 promotion.termsAndConditions?.takeIf { it.isNotBlank() }?.let { terms ->
                     Spacer(Modifier.height(10.dp))
@@ -269,10 +281,10 @@ private fun PromotionDetailContent(
                     )
                 }
 
-                if (errorMessage != null) {
+                if (visibleError != null) {
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        text = errorMessage,
+                        text = visibleError,
                         color = Color(0xFFD3503F),
                         fontSize = 13.sp,
                         modifier = Modifier.fillMaxWidth(),
@@ -283,7 +295,7 @@ private fun PromotionDetailContent(
 
         BottomActionBar(
             discountLabel = discountLabel(promotion.discountType, promotion.discountValue),
-            enabled = accepted && !isGenerating,
+            enabled = accepted && !isGenerating && blockedMessage == null,
             isGenerating = isGenerating,
             onApplyDiscount = { onApplyDiscount(promotion) },
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -320,10 +332,13 @@ private fun PromotionHeroImage(promotion: Promotion) {
 
 @Composable
 private fun TopActions(
+    promotionId: String,
     isFavorite: Boolean,
+    favoriteViewModel: FavoriteViewModel,
+    currentUserId: String,
     onBack: () -> Unit,
     onShare: () -> Unit,
-    onToggleFavorite: () -> Unit,
+    onFavoriteSaved: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -349,13 +364,16 @@ private fun TopActions(
                 )
             }
             Spacer(Modifier.width(8.dp))
-            FloatingIconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (isFavorite) "Quitar favorito" else "Agregar favorito",
-                    tint = if (isFavorite) KlipprPurple else KlipprTextDark,
-                )
-            }
+            RemoteFavoriteHeartButton(
+                userId = currentUserId,
+                promotionId = promotionId,
+                isFavorite = isFavorite,
+                favoriteViewModel = favoriteViewModel,
+                selectedTint = KlipprPurple,
+                unselectedTint = KlipprTextDark,
+                backgroundColor = Color.White.copy(alpha = 0.92f),
+                onSaved = onFavoriteSaved,
+            )
         }
     }
 }
@@ -617,10 +635,14 @@ private fun buildSubtitle(category: PromotionCategory, location: String?, descri
     ).joinToString(" · ")
 }
 
-private fun redemptionsLabel(promotion: Promotion): String {
+internal fun redemptionsLabel(promotion: Promotion): String {
     if (promotion.availableRedemptions == Int.MAX_VALUE) return "Canjes ilimitados disponibles"
     val remaining = (promotion.availableRedemptions - promotion.currentRedemptions).coerceAtLeast(0)
-    return "$remaining disponibles"
+    return when (remaining) {
+        0 -> "Sin canjes disponibles"
+        1 -> "1 canje disponible"
+        else -> "$remaining canjes disponibles"
+    }
 }
 
 private fun sharePromotion(context: Context, promotion: Promotion, businessDisplayName: String) {
